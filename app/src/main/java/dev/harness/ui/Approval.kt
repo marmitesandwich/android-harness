@@ -1,5 +1,6 @@
 package dev.harness.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +35,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 /** Plain-language name for what a write tool does; unknown tools fall back to their id. */
-private fun actionTitle(tool: String): String = when (tool) {
+internal fun actionTitle(tool: String): String = when (tool) {
     "put_setting" -> "Change a setting"
     "launch_app" -> "Open an app"
     "force_stop" -> "Force-stop an app"
@@ -115,10 +115,17 @@ fun ApprovalSheet(pending: PendingApproval, onRespond: (ApprovalResponse) -> Uni
                 ) { Text("Allow once", fontWeight = FontWeight.SemiBold) }
             }
             if (pending.canAlwaysAllow) {
-                TextButton(
+                // The permanent option: same size as the others, with the consequence spelled out.
+                OutlinedButton(
                     onClick = { onRespond(ApprovalResponse.ALWAYS_ALLOW) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Always allow ${pending.toolName}", color = c.subdued) }
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    border = BorderStroke(1.5.dp, c.write),
+                ) { Text("Always allow: ${actionTitle(pending.toolName).lowercase()}", fontWeight = FontWeight.SemiBold, color = c.write) }
+                Text(
+                    "Stops asking for any use of this action, in every chat. Undo it in Settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.subdued,
+                )
             }
         }
     }

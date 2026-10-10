@@ -102,7 +102,9 @@ class ChatViewModel(
         val loop = AgentLoop(
             llm = client,
             registry = registry,
-            gate = ApprovalGate(prompt),
+            gate = ApprovalGate(prompt, settings.alwaysAllowedTools) { tool ->
+                settings.alwaysAllowedTools += tool
+            },
         )
 
         isRunning = true

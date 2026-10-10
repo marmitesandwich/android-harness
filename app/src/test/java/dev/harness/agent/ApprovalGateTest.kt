@@ -46,6 +46,38 @@ class ApprovalGateTest {
     }
 
     @Test
+    fun `stored grants skip the prompt and new grants are reported once`() = runTest {
+        var prompts = 0
+        val granted = mutableListOf<String>()
+        val gate = ApprovalGate(
+            ApprovalPrompt { _, _ -> prompts++; ApprovalResponse.ALWAYS_ALLOW },
+            initialAlwaysAllowed = setOf("put_setting"),
+            onAlwaysAllow = { granted += it },
+        )
+
+        assertTrue(gate.approve(FakeTool("put_setting", Risk.WRITE), ToolCall("c1", "put_setting", "{}")))
+        assertEquals(0, prompts)
+
+        val launch = FakeTool("launch_app", Risk.WRITE)
+        gate.approve(launch, ToolCall("c2", "launch_app", "{}"))
+        gate.approve(launch, ToolCall("c3", "launch_app", "{}"))
+        assertEquals(1, prompts)
+        assertEquals(listOf("launch_app"), granted)
+    }
+
+    @Test
+    fun `a stored grant does not apply to a tool that opts out`() = runTest {
+        var prompts = 0
+        val gate = ApprovalGate(
+            ApprovalPrompt { _, _ -> prompts++; ApprovalResponse.DENY },
+            initialAlwaysAllowed = setOf("run_shell"),
+        )
+
+        assertFalse(gate.approve(FakeTool("run_shell", Risk.WRITE, canAlwaysAllow = false), ToolCall("c", "run_shell", "{}")))
+        assertEquals(1, prompts)
+    }
+
+    @Test
     fun `deny returns false`() = runTest {
         val gate = ApprovalGate(ApprovalPrompt { _, _ -> ApprovalResponse.DENY })
         assertFalse(gate.approve(FakeTool("put_setting", Risk.WRITE), ToolCall("c", "put_setting", "{}")))

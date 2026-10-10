@@ -17,21 +17,28 @@ fun interface ApprovalPrompt {
  * "Always allow" is remembered per tool, but only for tools that opt in
  * ([Tool.canAlwaysAllow]); `run_shell` opts out and always prompts.
  */
-class ApprovalGate(private val prompt: ApprovalPrompt) {
+class ApprovalGate(
+    private val prompt: ApprovalPrompt,
+    /** Grants loaded from storage, so "always" survives new chats and restarts. */
+    initialAlwaysAllowed: Set<String> = emptySet(),
+    /** Called once when the user grants a new permanent allow, so the caller can persist it. */
+    private val onAlwaysAllow: (String) -> Unit = {},
+) {
 
-    private val alwaysAllowed = mutableSetOf<String>()
+    private val alwaysAllowed = initialAlwaysAllowed.toMutableSet()
 
     fun isAlwaysAllowed(toolName: String): Boolean = toolName in alwaysAllowed
 
     /** True when the tool may run; false when the user denied it. */
     suspend fun approve(tool: Tool, call: ToolCall): Boolean {
         if (tool.risk == Risk.READ) return true
-        if (tool.name in alwaysAllowed) return true
+        // A stored grant for a tool that has since opted out (e.g. run_shell) must not apply.
+        if (tool.canAlwaysAllow && tool.name in alwaysAllowed) return true
 
         return when (prompt.ask(tool, call.arguments)) {
             ApprovalResponse.ALLOW_ONCE -> true
             ApprovalResponse.ALWAYS_ALLOW -> {
-                if (tool.canAlwaysAllow) alwaysAllowed += tool.name
+                if (tool.canAlwaysAllow && alwaysAllowed.add(tool.name)) onAlwaysAllow(tool.name)
                 true
             }
             ApprovalResponse.DENY -> false

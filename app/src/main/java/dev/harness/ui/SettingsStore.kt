@@ -29,6 +29,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL).orEmpty()
         set(value) = prefs.edit().putString(KEY_BASE_URL, value.trim()).apply()
 
+    /** Write tools the user chose "Always allow" for. Revocable from Settings. */
+    var alwaysAllowedTools: Set<String>
+        get() = prefs.getStringSet(KEY_ALWAYS_ALLOWED, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit().putStringSet(KEY_ALWAYS_ALLOWED, value.toSet()).apply()
+
     companion object {
         const val DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
 
@@ -39,5 +44,6 @@ class SettingsStore(context: Context) {
         private const val KEY_API_KEY = "api_key"
         private const val KEY_MODEL = "model"
         private const val KEY_BASE_URL = "base_url"
+        private const val KEY_ALWAYS_ALLOWED = "always_allowed_tools"
     }
 }

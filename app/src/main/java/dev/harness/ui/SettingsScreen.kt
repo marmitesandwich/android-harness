@@ -83,6 +83,27 @@ fun SettingsScreen(store: SettingsStore, onDone: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = Harness.colors.subdued,
             )
+            var allowed by remember { mutableStateOf(store.alwaysAllowedTools.sorted()) }
+            Text("Always allowed", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
+            if (allowed.isEmpty()) {
+                Text(
+                    "Nothing yet. Actions you choose to always allow show up here so you can take that back.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Harness.colors.subdued,
+                )
+            }
+            allowed.forEach { tool ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(actionTitle(tool), style = MaterialTheme.typography.bodyLarge)
+                        Text(tool, style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily), color = Harness.colors.subdued)
+                    }
+                    TextButton(onClick = {
+                        store.alwaysAllowedTools = store.alwaysAllowedTools - tool
+                        allowed = allowed - tool
+                    }) { Text("Revoke", fontWeight = FontWeight.SemiBold, color = Harness.colors.danger) }
+                }
+            }
             Button(
                 onClick = {
                     store.apiKey = apiKey
