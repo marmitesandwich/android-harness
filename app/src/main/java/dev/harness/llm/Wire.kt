@@ -79,3 +79,15 @@ internal data class FunctionDelta(
     val name: String? = null,
     val arguments: String? = null,
 )
+
+// ---- Error envelope -----------------------------------------------------
+
+@Serializable
+internal data class ApiErrorEnvelope(val error: ApiError? = null)
+
+@Serializable
+internal data class ApiError(
+    val message: String? = null,
+    val type: String? = null,
+    val code: String? = null,
+)

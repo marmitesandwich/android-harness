@@ -27,28 +27,28 @@ class OpenAiCompatClient(
     model: String,
     private val http: OkHttpClient = defaultHttpClient(),
     private val temperature: Double? = null,
+    sessionId: String = newSessionId(),
 ) : LlmClient {
 
     private val baseUrl = baseUrl.trim()
     private val model = model.trim()
     private val apiKey = sanitizeApiKey(apiKey)
+    private val sessionId = sessionId.trim().ifEmpty { newSessionId() }
 
     override fun stream(history: List<ChatMessage>, tools: List<ToolSchema>): Flow<LlmEvent> = flow {
         try {
             val requestBody = buildChatRequest(model, history, tools, temperature)
             val payload = HarnessJson.encodeToString(ChatRequest.serializer(), requestBody)
 
-            val request = Request.Builder()
+            val builder = Request.Builder()
                 .url(chatCompletionsUrl(baseUrl))
-                .header("Authorization", "Bearer $apiKey")
-                .header("Accept", "text/event-stream")
                 .post(payload.toRequestBody(JSON_MEDIA))
-                .build()
+            harnessHeaders(apiKey, sessionId).forEach { (name, value) -> builder.header(name, value) }
 
-            http.newCall(request).execute().use { response ->
+            http.newCall(builder.build()).execute().use { response ->
                 if (!response.isSuccessful) {
-                    val detail = runCatching { response.body.string().take(500) }.getOrDefault("")
-                    emit(LlmEvent.Failure("HTTP ${response.code} ${response.message}$detail"))
+                    val body = runCatching { response.body.string() }.getOrDefault("")
+                    emit(LlmEvent.Failure(describeHttpFailure(response.code, response.message, body)))
                     return@use
                 }
 
@@ -85,6 +85,34 @@ class OpenAiCompatClient(
  * contain them.
  */
 internal fun sanitizeApiKey(raw: String): String = raw.filterNot { it.isWhitespace() }
+
+/** Identifies this client to OpenCode Go, which rejects generic HTTP-library user agents. */
+const val HARNESS_USER_AGENT = "harness-android/0.1.0"
+
+internal fun newSessionId(): String = java.util.UUID.randomUUID().toString()
+
+/**
+ * Request headers. `x-opencode-session` lets the gateway keep a conversation on
+ * one route and reuse prompt cache; a stable per-conversation value is expected.
+ */
+internal fun harnessHeaders(apiKey: String, sessionId: String): List<Pair<String, String>> = listOf(
+    "Authorization" to "Bearer $apiKey",
+    "Accept" to "text/event-stream",
+    "User-Agent" to HARNESS_USER_AGENT,
+    "x-opencode-session" to sessionId,
+)
+
+/**
+ * Turns an HTTP failure into one readable line, preferring the message inside
+ * an `{"error":{"message":...}}` envelope and falling back to the raw body.
+ */
+internal fun describeHttpFailure(code: Int, reason: String, body: String): String {
+    val parsed = runCatching {
+        HarnessJson.decodeFromString(ApiErrorEnvelope.serializer(), body).error?.message
+    }.getOrNull()
+    val detail = parsed?.takeIf { it.isNotBlank() } ?: body.take(300).ifBlank { "(no body)" }
+    return "HTTP $code $reason: $detail"
+}
 
 /** Long read timeout is required: an SSE stream stays open for the whole turn. */
 fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()

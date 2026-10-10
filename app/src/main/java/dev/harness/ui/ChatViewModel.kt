@@ -18,6 +18,7 @@ import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.llm.ChatMessage
 import dev.harness.llm.OpenAiCompatClient
+import dev.harness.llm.newSessionId
 import dev.harness.tools.HarnessTools
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
@@ -45,6 +46,9 @@ class ChatViewModel(
 
     private var runJob: Job? = null
     private var approvalDeferred: CompletableDeferred<ApprovalResponse>? = null
+
+    /** Stable per-conversation id sent as `x-opencode-session`; reset on New. */
+    private var sessionId: String = newSessionId()
 
     private val prompt = ApprovalPrompt { tool, argumentsJson ->
         val deferred = CompletableDeferred<ApprovalResponse>()
@@ -87,6 +91,7 @@ class ChatViewModel(
             baseUrl = settings.baseUrl,
             apiKey = settings.apiKey,
             model = settings.model,
+            sessionId = sessionId,
         )
         val loop = AgentLoop(
             llm = client,
@@ -115,6 +120,7 @@ class ChatViewModel(
         cancel()
         conversation.clear()
         _messages.clear()
+        sessionId = newSessionId()
     }
 
     private fun render(event: AgentEvent) {

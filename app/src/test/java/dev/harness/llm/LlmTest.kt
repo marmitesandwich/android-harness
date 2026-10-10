@@ -121,4 +121,28 @@ class OpenAiCompatClientTest {
 
         assertTrue(events.single() is LlmEvent.Failure)
     }
+
+    @Test
+    fun `identifies itself and sends a session id`() {
+        val headers = harnessHeaders("sk-x", "session-42").toMap()
+
+        assertEquals("Bearer sk-x", headers["Authorization"])
+        assertEquals("text/event-stream", headers["Accept"])
+        assertEquals(HARNESS_USER_AGENT, headers["User-Agent"])
+        assertEquals("session-42", headers["x-opencode-session"])
+        // OpenCode Go rejects generic HTTP-library user agents.
+        assertTrue(HARNESS_USER_AGENT.startsWith("harness-android/"))
+    }
+
+    @Test
+    fun `extracts the message from an API error envelope`() {
+        val body = """{"error":{"message":"model 'qwen3-coder' not found","type":"invalid_request_error"}}"""
+        assertEquals("HTTP 404 Not Found: model 'qwen3-coder' not found", describeHttpFailure(404, "Not Found", body))
+    }
+
+    @Test
+    fun `falls back to the raw body when it is not an envelope`() {
+        assertEquals("HTTP 500 Oops: <html>boom</html>", describeHttpFailure(500, "Oops", "<html>boom</html>"))
+        assertEquals("HTTP 502 Bad Gateway: (no body)", describeHttpFailure(502, "Bad Gateway", ""))
+    }
 }

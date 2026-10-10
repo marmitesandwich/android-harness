@@ -33,7 +33,7 @@ class SettingsStore(context: Context) {
         const val DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
 
         /** A chat-completions model; change it in Settings to match your provider. */
-        const val DEFAULT_MODEL = "qwen3-coder"
+        const val DEFAULT_MODEL = "deepseek-v4.1-flash"
 
         private const val FILE_NAME = "harness_settings"
         private const val KEY_API_KEY = "api_key"
