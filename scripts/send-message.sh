@@ -62,9 +62,9 @@ else
 fi
 
 echo "--- type: $PROMPT"
-# `input text` mangles spaces on this OEM build; `input keyboard text` handles them.
-"$ADB" shell input keyboard text "$PROMPT" >/dev/null 2>&1 \
-  || "$ADB" shell input text "$(echo "$PROMPT" | tr ' ' '%s')"
+# Pass the whole remote command as ONE argument; adb joins argv with spaces, so an
+# unquoted prompt would reach `input` as multiple words and only the first is typed.
+"$ADB" shell "input keyboard text '$PROMPT'"
 sleep 1
 
 dump_ui

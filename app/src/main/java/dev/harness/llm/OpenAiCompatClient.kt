@@ -148,5 +148,4 @@ private fun ChatMessage.toWire(): WireMessage = WireMessage(
         WireToolCall(id = call.id, function = WireToolCallFunction(call.name, call.arguments))
     },
     toolCallId = toolCallId,
-    name = name,
 )

@@ -9,7 +9,9 @@ ROOT="$(dirname "$SCRIPT_DIR")"
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 
 echo "--- install"
-"$ADB" install -r "$APK"
+# The APK is a host path, so it needs Windows form; MSYS_NO_PATHCONV leaves it as /c/...
+APK_WIN="$(cygpath -w "$APK")"
+"$ADB" install -r "$APK_WIN"
 
 echo "--- clear logcat"
 "$ADB" logcat -c || true

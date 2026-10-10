@@ -4,6 +4,7 @@ import dev.harness.tools.HarnessJson
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -144,5 +145,18 @@ class OpenAiCompatClientTest {
     fun `falls back to the raw body when it is not an envelope`() {
         assertEquals("HTTP 500 Oops: <html>boom</html>", describeHttpFailure(500, "Oops", "<html>boom</html>"))
         assertEquals("HTTP 502 Bad Gateway: (no body)", describeHttpFailure(502, "Bad Gateway", ""))
+    }
+
+    @Test
+    fun `tool result messages carry no name field`() {
+        // Regression: GLM rejects tool messages with "name":
+        // HTTP 400 [unsupported_parameter] messages[n]: "name" is not supported by this endpoint.
+        val history = listOf(ChatMessage.toolResult("c1", "get_setting", "30000"))
+        val request = buildChatRequest("m", history, emptyList(), null)
+        val json = HarnessJson.encodeToString(ChatRequest.serializer(), request)
+
+        assertFalse("payload leaked a name field: $json", json.contains("\"name\""))
+        assertTrue(json.contains("\"tool_call_id\":\"c1\""))
+        assertTrue(json.contains("\"role\":\"tool\""))
     }
 }

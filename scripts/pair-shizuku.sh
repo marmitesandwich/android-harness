@@ -20,11 +20,18 @@ dump_ui() {
 
 # Prints "x y" centre of the first node whose text or content-desc equals $1
 centre_of() {
-  local target="$1" bounds
-  bounds=$(grep -o "\(text\|content-desc\)=\"$target\"[^/]*bounds=\"\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]\"" "$LOCAL_XML" \
-            | head -n1 | grep -o 'bounds="\[[0-9,]*\]\[[0-9,]*\]"')
-  [ -z "$bounds" ] && return 1
-  echo "$bounds" | awk -F'[][,]' '{print int(($2+$4)/2), int(($3+$5)/2)}'
+  local target="$1" bounds b x1 y1 x2 y2
+  b=$(tr '>' '\n' < "$LOCAL_XML" \
+        | grep -E "(text|content-desc)=\"$target\"" \
+        | head -n1 \
+        | grep -o 'bounds="\[[0-9,]*\]\[[0-9,]*\]"')
+  [ -z "$b" ] && return 1
+  # awk -F'[][,]' yields an empty field for the "][" junction, so parse with sed.
+  x1=$(echo "$b" | sed -n 's/.*\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\1/p')
+  y1=$(echo "$b" | sed -n 's/.*\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\2/p')
+  x2=$(echo "$b" | sed -n 's/.*\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\3/p')
+  y2=$(echo "$b" | sed -n 's/.*\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\].*/\4/p')
+  echo "$(( (x1 + x2) / 2 )) $(( (y1 + y2) / 2 ))"
 }
 
 echo "--- bring Harness forward (verify focus)"

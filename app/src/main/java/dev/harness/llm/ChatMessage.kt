@@ -27,6 +27,7 @@ data class ChatMessage(
     val content: String? = null,
     val toolCalls: List<ToolCall> = emptyList(),
     val toolCallId: String? = null,
+    /** Tool name, kept for display. Not serialised: some endpoints reject it. */
     val name: String? = null,
 ) {
     companion object {

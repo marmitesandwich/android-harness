@@ -20,7 +20,9 @@ internal data class WireMessage(
     val content: String? = null,
     @SerialName("tool_calls") val toolCalls: List<WireToolCall>? = null,
     @SerialName("tool_call_id") val toolCallId: String? = null,
-    val name: String? = null,
+    // Note: deliberately no `name` field. It is optional in the OpenAI schema and
+    // some OpenAI-compatible endpoints (e.g. GLM) reject tool messages carrying it:
+    // HTTP 400 [unsupported_parameter] messages[n]: "name" is not supported.
 )
 
 @Serializable

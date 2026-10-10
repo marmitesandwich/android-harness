@@ -10,11 +10,11 @@ import kotlinx.serialization.json.JsonObject
 /** `settings get <namespace> <key>` */
 class GetSettingTool(shell: ShellBackend) : ShellTool(shell) {
     override val name = "get_setting"
-    override val description = "Read an Android setting (system, secure or global). Example: get_setting(system, screen_timeout)"
+    override val description = "Read an Android setting (system, secure or global). Example: get_setting(system, screen_off_timeout)"
     override val risk = Risk.READ
     override val jsonSchema = Params.obj(
         "namespace" to Params.str("One of: system, secure, global"),
-        "key" to Params.str("Setting key, e.g. screen_timeout"),
+        "key" to Params.str("Setting key, e.g. screen_off_timeout"),
         required = listOf("namespace", "key"),
     )
 

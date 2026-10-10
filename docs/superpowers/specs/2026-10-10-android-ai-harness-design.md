@@ -20,8 +20,7 @@ Personal Android app acting as an agent harness: chat with an LLM (OpenCode Go f
 | `backend/` | `ShellBackend` (Shizuku UserService), `UiBackend` (AccessibilityService) |
 
 ## v1 tools
-- Shell READ: `get_setting(ns,key)`, `logcat(filter,lines)`, `dumpsys(service)`, `list_packages`, `app_info(pkg)`, `getprop`
-- Shell WRITE: `put_setting`, `launch_app`, `force_stop`, `run_shell`
+- Shell READ: `get_setting(ns,key)`, `logcat(filter,lines)`, `dumpsys(service)`, `list_packages`, `app_info(pkg)`, `getprop`- Shell WRITE: `put_setting`, `launch_app`, `force_stop`, `run_shell`
 - Accessibility: `ui_tree` (READ), `screenshot` (READ), `tap`, `swipe`, `type_text`, `press_back`, `press_home` (WRITE)
 
 ## Data flow
@@ -40,8 +39,14 @@ user msg → AgentLoop → `LlmClient.stream()` (deltas to UI) → tool_calls �
 
 ## Testing
 - JVM unit tests: AgentLoop with scripted fake `LlmClient`, Gate, SSE parser, truncation, tools vs fake backend.
-- Manual device checklist in README: pair Shizuku, enable accessibility service, ask "what is my screen timeout?".
+- Manual device checklist in README: pair Shizuku, enable accessibility service, ask "what is my screen off timeout?".
 
 ## Open assumptions
 - Personal sideload only (no Play Store policy concerns for Accessibility).
 - Last session persisted to a file, not a DB.
+
+## Verified on device (2026-10-10)
+- OpenCode Go requires a client `User-Agent` and a stable `x-opencode-session` header, or requests are refused with a pointer to the Go docs. Implemented in `OpenAiCompatClient`.
+- Model ids are hyphenated and per-endpoint (for example `glm-5.3-flash`, `deepseek-v4.1-flash` on `/chat/completions`). The default model must be a real chat-completions id.
+- Tool result messages must not carry a `name` field; at least one endpoint rejects them with `[unsupported_parameter]`.
+- `screen_timeout` is not a real Android setting key; use `screen_off_timeout`.

@@ -29,8 +29,11 @@ The APK lands in `app/build/outputs/apk/debug/app-debug.apk`. Install with
 2. Enable the accessibility service: **Settings > Accessibility > Harness UI
    control**. This is what powers the UI tools.
 3. Open **Settings** in the app and paste your API key. Set the model to a
-   chat-completions model for your provider. The default base URL is
-   `https://opencode.ai/zen/go/v1`.
+   chat-completions model id for your provider. The default base URL is
+   `https://opencode.ai/zen/go/v1`; OpenCode Go model ids look like
+   `glm-5.3-flash` or `deepseek-v4.1-flash` (see
+   <https://opencode.ai/docs/go/#endpoints>). Models served on `/responses` or
+   `/messages` are not supported in v1.
 
 The banner disappears when all three prerequisites are satisfied.
 
@@ -52,8 +55,8 @@ per-tool "always allow" except `run_shell`, which always asks.
 
 Run after installing:
 
-1. Pair Shizuku and confirm `get_setting(system, screen_timeout)` returns a value
-   when you ask "what is my screen timeout?".
+1. Pair Shizuku and confirm `get_setting(system, screen_off_timeout)` returns a value
+   when you ask "what is my screen off timeout?".
 2. Enable accessibility, then ask "what is on my screen?" and confirm the agent
    calls `ui_tree`.
 3. Ask the agent to change a setting (e.g. screen timeout) and confirm the
