@@ -19,15 +19,15 @@ class SettingsStore(context: Context) {
 
     var apiKey: String
         get() = prefs.getString(KEY_API_KEY, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_API_KEY, value).apply()
+        set(value) = prefs.edit().putString(KEY_API_KEY, value.trim()).apply()
 
     var model: String
         get() = prefs.getString(KEY_MODEL, DEFAULT_MODEL).orEmpty()
-        set(value) = prefs.edit().putString(KEY_MODEL, value).apply()
+        set(value) = prefs.edit().putString(KEY_MODEL, value.trim()).apply()
 
     var baseUrl: String
         get() = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL).orEmpty()
-        set(value) = prefs.edit().putString(KEY_BASE_URL, value).apply()
+        set(value) = prefs.edit().putString(KEY_BASE_URL, value.trim()).apply()
 
     companion object {
         const val DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"

@@ -17,27 +17,34 @@ import java.util.concurrent.TimeUnit
  *
  * Works against any endpoint that speaks the OpenAI chat-completions protocol
  * (including OpenCode Go's `https://opencode.ai/zen/go/v1`).
+ *
+ * This class never throws out of [stream]: every failure, including a malformed
+ * URL or header, is reported as [LlmEvent.Failure] so the app cannot crash.
  */
 class OpenAiCompatClient(
-    private val baseUrl: String,
-    private val apiKey: String,
-    private val model: String,
+    baseUrl: String,
+    apiKey: String,
+    model: String,
     private val http: OkHttpClient = defaultHttpClient(),
     private val temperature: Double? = null,
 ) : LlmClient {
 
+    private val baseUrl = baseUrl.trim()
+    private val model = model.trim()
+    private val apiKey = sanitizeApiKey(apiKey)
+
     override fun stream(history: List<ChatMessage>, tools: List<ToolSchema>): Flow<LlmEvent> = flow {
-        val requestBody = buildChatRequest(model, history, tools, temperature)
-        val payload = HarnessJson.encodeToString(ChatRequest.serializer(), requestBody)
-
-        val request = Request.Builder()
-            .url(chatCompletionsUrl(baseUrl))
-            .header("Authorization", "Bearer $apiKey")
-            .header("Accept", "text/event-stream")
-            .post(payload.toRequestBody(JSON_MEDIA))
-            .build()
-
         try {
+            val requestBody = buildChatRequest(model, history, tools, temperature)
+            val payload = HarnessJson.encodeToString(ChatRequest.serializer(), requestBody)
+
+            val request = Request.Builder()
+                .url(chatCompletionsUrl(baseUrl))
+                .header("Authorization", "Bearer $apiKey")
+                .header("Accept", "text/event-stream")
+                .post(payload.toRequestBody(JSON_MEDIA))
+                .build()
+
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     val detail = runCatching { response.body.string().take(500) }.getOrDefault("")
@@ -71,6 +78,13 @@ class OpenAiCompatClient(
         val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 }
+
+/**
+ * Removes every whitespace character. Pasted API keys routinely carry a
+ * trailing newline or wrapped spaces, and an HTTP header value must not
+ * contain them.
+ */
+internal fun sanitizeApiKey(raw: String): String = raw.filterNot { it.isWhitespace() }
 
 /** Long read timeout is required: an SSE stream stays open for the whole turn. */
 fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()

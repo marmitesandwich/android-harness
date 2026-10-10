@@ -1,8 +1,11 @@
 package dev.harness.llm
 
 import dev.harness.tools.HarnessJson
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SseParserTest {
@@ -84,5 +87,38 @@ class ChatRequestMappingTest {
         assertEquals("https://x/v1/chat/completions", chatCompletionsUrl("https://x/v1"))
         assertEquals("https://x/v1/chat/completions", chatCompletionsUrl("https://x/v1/"))
         assertEquals("https://x/v1/chat/completions", chatCompletionsUrl("https://x/v1/chat/completions"))
+    }
+}
+
+class OpenAiCompatClientTest {
+
+    @Test
+    fun `api key whitespace is stripped`() {
+        assertEquals("sk-abc", sanitizeApiKey(" sk-abc\n"))
+        assertEquals("sk-abc", sanitizeApiKey("sk-\nabc"))
+        assertEquals("", sanitizeApiKey("  \n\t "))
+    }
+
+    @Test
+    fun `an unusable base url yields a Failure event instead of throwing`() = runTest {
+        // Regression: a bad header or URL used to escape the flow and crash the app.
+        val client = OpenAiCompatClient(baseUrl = "not a url", apiKey = "key\n", model = "model")
+        val events = client.stream(listOf(ChatMessage.user("hi")), emptyList()).toList()
+
+        assertEquals(1, events.size)
+        assertTrue("expected Failure, got ${events.single()}", events.single() is LlmEvent.Failure)
+    }
+
+    @Test
+    fun `a key containing a newline does not crash header construction`() = runTest {
+        val client = OpenAiCompatClient(
+            baseUrl = "http://127.0.0.1:1/v1",
+            apiKey = "sk-test\n",
+            model = "model",
+        )
+        // Connection is refused, but the point is that it is reported, not thrown.
+        val events = client.stream(listOf(ChatMessage.user("hi")), emptyList()).toList()
+
+        assertTrue(events.single() is LlmEvent.Failure)
     }
 }
