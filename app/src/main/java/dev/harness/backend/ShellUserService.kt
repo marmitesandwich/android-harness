@@ -7,21 +7,14 @@ import androidx.annotation.Keep
 /**
  * Runs inside the Shizuku user-service process, i.e. as the shell user.
  *
- * Shizuku instantiates this class by reflection, so the constructors must be
- * kept and the class must extend the generated [IShellService.Stub].
+ * Shizuku instantiates this class by reflection, trying a `Context` constructor
+ * first and a no-argument constructor second, so both must exist. The `@Keep`
+ * annotation and the ProGuard rule stop them being stripped.
  */
-class ShellUserService : IShellService.Stub() {
-
-    @Keep
-    @Suppress("unused")
-    constructor()
-
-    @Keep
-    @Suppress("unused")
-    constructor(context: Context) {
-        // Context is supplied by Shizuku; nothing needed here.
-        context.packageName
-    }
+@Keep
+class ShellUserService @JvmOverloads constructor(
+    @Suppress("UNUSED_PARAMETER") context: Context? = null,
+) : IShellService.Stub() {
 
     override fun destroy() {
         System.exit(0)

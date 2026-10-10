@@ -9,8 +9,11 @@ fun truncateOutput(text: String, maxBytes: Int): String {
     val bytes = text.toByteArray(Charsets.UTF_8)
     if (bytes.size <= maxBytes) return text
     var end = maxBytes
+    // Back off out of the middle of a multi-byte character.
     while (end > 0 && (bytes[end].toInt() and 0xC0) == 0x80) end--
-    val head = String(bytes, 0, end, Charsets.UTF_8)
-    val dropped = bytes.size - end
-    return "$head\n…[truncated $dropped bytes]"
+    var head = String(bytes, 0, end, Charsets.UTF_8)
+    // A cut at a lead byte still yields an incomplete tail, decoded as U+FFFD.
+    if (head.endsWith('\uFFFD')) head = head.dropLast(1)
+    val kept = head.toByteArray(Charsets.UTF_8).size
+    return "$head\n…[truncated ${bytes.size - kept} bytes]"
 }

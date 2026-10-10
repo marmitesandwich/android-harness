@@ -8,5 +8,5 @@ interface IShellService {
     void destroy() = 16777114;
 
     // Runs a command and returns {exitCode:int, stdout:String, stderr:String}.
-    Bundle exec(String command);
+    Bundle exec(String command) = 1;
 }
