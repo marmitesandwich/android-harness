@@ -1,10 +1,8 @@
 package dev.harness.tools.shell
 
+import dev.harness.backend.SHIZUKU_UNAVAILABLE
 import dev.harness.backend.ShellBackend
 import dev.harness.tools.Tool
-
-internal const val SHIZUKU_UNAVAILABLE =
-    "ERROR: Shizuku is not running or permission not granted. Open Harness to pair Shizuku."
 
 internal val SETTING_NAMESPACES = setOf("system", "secure", "global")
 

@@ -36,6 +36,10 @@ object Shell {
     fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
 }
 
+/** Message returned when Shizuku is missing, so tools stay actionable. */
+const val SHIZUKU_UNAVAILABLE =
+    "ERROR: Shizuku is not running or permission not granted. Open Harness to pair Shizuku."
+
 /** Used when Shizuku is missing so tools return a clear, actionable message. */
 class UnavailableShellBackend(private val reason: String) : ShellBackend {
     override val available: Boolean = false

@@ -19,3 +19,7 @@
 
 # Shizuku
 -keep class rikka.shizuku.** { *; }
+
+# Installed reflectively by Shizuku as a user service.
+-keep class dev.harness.backend.ShellUserService { *; }
+-keep class dev.harness.backend.IShellService$Stub { *; }
