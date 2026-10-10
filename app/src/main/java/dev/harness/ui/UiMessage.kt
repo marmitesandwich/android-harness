@@ -7,6 +7,7 @@ data class UiMessage(
     val text: String,
     val toolName: String? = null,
     val toolArgs: String? = null,
+    val write: Boolean = false,
     val denied: Boolean = false,
     val running: Boolean = false,
     val streaming: Boolean = false,

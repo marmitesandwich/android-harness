@@ -20,6 +20,7 @@ import dev.harness.llm.ChatMessage
 import dev.harness.llm.OpenAiCompatClient
 import dev.harness.llm.newSessionId
 import dev.harness.tools.HarnessTools
+import dev.harness.tools.Risk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -43,6 +44,11 @@ class ChatViewModel(
         private set
     var status by mutableStateOf(BackendStatus())
         private set
+
+    private val registry by lazy { HarnessTools.registry(shell, uiBackend) }
+
+    /** Shown in the top bar; re-read whenever [refreshStatus] runs. */
+    val modelName: String get() = settings.model
 
     private var runJob: Job? = null
     private var approvalDeferred: CompletableDeferred<ApprovalResponse>? = null
@@ -95,7 +101,7 @@ class ChatViewModel(
         )
         val loop = AgentLoop(
             llm = client,
-            registry = HarnessTools.registry(shell, uiBackend),
+            registry = registry,
             gate = ApprovalGate(prompt),
         )
 
@@ -135,6 +141,7 @@ class ChatViewModel(
                     text = "",
                     toolName = event.name,
                     toolArgs = event.argumentsJson,
+                    write = registry.find(event.name)?.risk == Risk.WRITE,
                     running = true,
                 )
             }

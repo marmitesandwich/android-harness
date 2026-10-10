@@ -1,41 +1,80 @@
 package dev.harness.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.harness.agent.ApprovalResponse
+import androidx.compose.ui.unit.sp
+import dev.harness.ui.theme.Harness
+import dev.harness.ui.theme.MonoFamily
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val Gutter = 26.dp // x of the trace rail
+private val ToolInset = 44.dp // where tool text starts, right of the rail
+
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
@@ -43,173 +82,400 @@ fun ChatScreen(
     onRequestShizuku: () -> Unit,
     onOpenAccessibility: () -> Unit,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Harness") },
-                actions = {
-                    TextButton(onClick = { viewModel.newChat() }) { Text("New") }
-                    TextButton(onClick = onOpenSettings) { Text("Settings") }
-                },
-            )
-        },
-        bottomBar = { Composer(viewModel) },
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            StatusBanner(viewModel.status, onRequestShizuku, onOpenAccessibility, onOpenSettings)
-            MessageList(viewModel.messages, modifier = Modifier.weight(1f).fillMaxWidth())
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime)),
+    ) {
+        TopBar(viewModel, onOpenSettings)
+        StatusStrip(viewModel.status, onRequestShizuku, onOpenAccessibility, onOpenSettings)
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (viewModel.messages.isEmpty()) {
+                EmptyState(viewModel)
+            } else {
+                MessageList(viewModel.messages)
+            }
         }
+        Composer(viewModel)
     }
 
     viewModel.pendingApproval?.let { pending ->
-        ApprovalDialog(pending) { response -> viewModel.respondToApproval(response) }
+        ApprovalSheet(pending) { response -> viewModel.respondToApproval(response) }
+    }
+}
+
+// ---- top bar ---------------------------------------------------------------
+
+@Composable
+private fun TopBar(viewModel: ChatViewModel, onOpenSettings: () -> Unit) {
+    val c = Harness.colors
+    val status = viewModel.status
+    Row(
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Harness", style = MaterialTheme.typography.titleLarge)
+            Text(
+                viewModel.modelName,
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 11.sp),
+                color = c.subdued,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        StatusDots(status)
+        IconButton(
+            onClick = { viewModel.newChat() },
+            modifier = Modifier.semantics { contentDescription = "New chat" },
+        ) { PlusIcon(MaterialTheme.colorScheme.onBackground) }
+        IconButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.semantics { contentDescription = "Settings" },
+        ) { SlidersIcon(MaterialTheme.colorScheme.onBackground, MaterialTheme.colorScheme.background) }
+    }
+}
+
+/** API key, Shizuku, Accessibility: filled when ready, hollow when something is missing. */
+@Composable
+private fun StatusDots(status: BackendStatus) {
+    val c = Harness.colors
+    val summary = "API key ${if (status.apiKeySet) "set" else "missing"}, " +
+        "Shizuku ${if (status.shizukuAvailable) "ready" else "unavailable"}, " +
+        "Accessibility ${if (status.accessibilityEnabled) "on" else "off"}"
+    Row(
+        Modifier.padding(end = 4.dp).semantics(mergeDescendants = true) { contentDescription = summary },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        listOf(status.apiKeySet, status.shizukuAvailable, status.accessibilityEnabled).forEach { ok ->
+            Canvas(Modifier.size(8.dp)) {
+                if (ok) drawCircle(c.read) else drawCircle(c.write, style = Stroke(1.5.dp.toPx()))
+            }
+        }
     }
 }
 
 @Composable
-private fun StatusBanner(
+private fun StatusStrip(
     status: BackendStatus,
     onRequestShizuku: () -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     if (status.allGood) return
-
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            if (!status.apiKeySet) {
-                BannerRow("API key not set", "Set key", onOpenSettings)
-            }
-            if (!status.shizukuAvailable) {
-                BannerRow("Shizuku: not available", "Pair", onRequestShizuku)
-            }
-            if (!status.accessibilityEnabled) {
-                BannerRow("Accessibility: off", "Enable", onOpenAccessibility)
-            }
-        }
+    Column {
+        if (!status.apiKeySet) StatusRow("No API key", "Add key", onOpenSettings)
+        if (!status.shizukuAvailable) StatusRow("Shizuku isn't running", "Pair", onRequestShizuku)
+        if (!status.accessibilityEnabled) StatusRow("Accessibility service is off", "Enable", onOpenAccessibility)
     }
 }
 
 @Composable
-private fun BannerRow(label: String, action: String, onClick: () -> Unit) {
+private fun StatusRow(label: String, action: String, onClick: () -> Unit) {
+    val c = Harness.colors
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = 20.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onClick) { Text(action) }
+        Box(Modifier.width(3.dp).fillMaxHeight().padding(vertical = 6.dp).background(c.write))
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(start = 10.dp))
+        TextButton(onClick = onClick) { Text(action, fontWeight = FontWeight.SemiBold) }
     }
 }
 
+// ---- empty state -----------------------------------------------------------
+
+private val Starters = listOf(
+    "What's my screen timeout?",
+    "Show recent crashes from logcat",
+    "Which apps are using the most battery?",
+)
+
 @Composable
-private fun MessageList(messages: List<UiMessage>, modifier: Modifier = Modifier) {
-    val state = rememberLazyListState()
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) state.animateScrollToItem(messages.lastIndex)
-    }
-    LazyColumn(state = state, modifier = modifier, contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp)) {
-        items(messages, key = { it.id }) { message ->
-            MessageRow(message)
+private fun EmptyState(viewModel: ChatViewModel) {
+    val c = Harness.colors
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.Center) {
+        Text("Ask about this phone", style = MaterialTheme.typography.titleLarge.copy(fontSize = 30.sp, lineHeight = 36.sp))
+        Text(
+            "Settings, logs, installed apps and what's on screen. Changes always ask first.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = c.subdued,
+            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
+        )
+        Starters.forEach { prompt ->
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.input = prompt; viewModel.send() }
+                    .drawBehind {
+                        drawLine(c.rule, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
+                    }
+                    .padding(vertical = 16.dp),
+            ) { Text(prompt, style = MaterialTheme.typography.bodyLarge) }
         }
     }
 }
 
+// ---- conversation ------------------------------------------------------------
+
 @Composable
-private fun MessageRow(message: UiMessage) {
-    val alignment = if (message.kind == UiMessage.Kind.USER) Alignment.CenterEnd else Alignment.CenterStart
-    val background = when (message.kind) {
-        UiMessage.Kind.USER -> MaterialTheme.colorScheme.primaryContainer
-        UiMessage.Kind.ERROR -> MaterialTheme.colorScheme.errorContainer
-        UiMessage.Kind.TOOL -> MaterialTheme.colorScheme.secondaryContainer
-        UiMessage.Kind.ASSISTANT -> MaterialTheme.colorScheme.surfaceVariant
+private fun MessageList(messages: List<UiMessage>) {
+    val state = rememberLazyListState()
+    val tail = messages.lastOrNull()
+    LaunchedEffect(messages.size, tail?.text?.length) {
+        if (messages.isNotEmpty()) state.scrollToItem(messages.lastIndex)
     }
-    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), contentAlignment = alignment) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = background),
-            modifier = Modifier.fillMaxWidth(0.92f),
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                when (message.kind) {
-                    UiMessage.Kind.TOOL -> ToolBody(message)
-                    UiMessage.Kind.ERROR -> {
-                        Text("Error", style = MaterialTheme.typography.labelMedium)
-                        Text(message.text, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    else -> Text(message.text.ifEmpty { "…" }, style = MaterialTheme.typography.bodyMedium)
-                }
+    LazyColumn(state = state, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
+        itemsIndexed(messages, key = { _, m -> m.id }) { index, message ->
+            when (message.kind) {
+                UiMessage.Kind.USER -> UserBlock(message)
+                UiMessage.Kind.ASSISTANT -> Prose(message)
+                UiMessage.Kind.ERROR -> ErrorBlock(message)
+                UiMessage.Kind.TOOL -> ToolRow(
+                    message,
+                    connectUp = messages.getOrNull(index - 1)?.kind == UiMessage.Kind.TOOL,
+                    connectDown = messages.getOrNull(index + 1)?.kind == UiMessage.Kind.TOOL,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ToolBody(message: UiMessage) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(message.toolName ?: "tool", style = MaterialTheme.typography.labelLarge)
-        if (message.running) {
-            CircularProgressIndicator(modifier = Modifier.padding(start = 8.dp).width(16.dp), strokeWidth = 2.dp)
+private fun UserBlock(message: UiMessage) {
+    Box(
+        Modifier.fillMaxWidth().padding(start = 56.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        SelectionContainer {
+            Text(
+                message.text,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .background(Harness.colors.surface2, RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            )
         }
-        if (message.denied) {
-            Text("  denied", style = MaterialTheme.typography.labelMedium)
-        }
-    }
-    message.toolArgs?.takeIf { it.isNotBlank() && it != "{}" }?.let {
-        Text(it, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, maxLines = 4, overflow = TextOverflow.Ellipsis)
-    }
-    if (message.text.isNotBlank()) {
-        HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
-        Text(message.text, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
     }
 }
+
+@Composable
+private fun Prose(message: UiMessage) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        SelectionContainer {
+            Markdown(if (message.streaming) message.text + " ▍" else message.text.ifEmpty { "…" })
+        }
+    }
+}
+
+@Composable
+private fun ErrorBlock(message: UiMessage) {
+    val c = Harness.colors
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(horizontal = 20.dp, vertical = 8.dp)) {
+        Box(Modifier.width(3.dp).fillMaxHeight().background(c.danger))
+        SelectionContainer {
+            Text(message.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 10.dp))
+        }
+    }
+}
+
+// ---- trace rail --------------------------------------------------------------
+
+private const val MaxExpandedLines = 40
+
+/** One tool call: a node on the rail, name + args, and a result that expands on tap. */
+@Composable
+private fun ToolRow(message: UiMessage, connectUp: Boolean, connectDown: Boolean) {
+    val c = Harness.colors
+    var expanded by rememberSaveable(message.id) { mutableStateOf(false) }
+    val failed = message.text.startsWith("ERROR")
+    val accent = when {
+        failed -> c.danger
+        message.denied -> c.subdued
+        message.write -> c.write
+        else -> c.read
+    }
+    val pulse = if (message.running) {
+        rememberInfiniteTransition(label = "running").animateFloat(
+            initialValue = 0.3f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
+            label = "pulse",
+        ).value
+    } else {
+        1f
+    }
+    val hasResult = !message.running && message.text.isNotBlank()
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val x = Gutter.toPx()
+                val y = 17.dp.toPx()
+                if (connectUp) drawLine(c.rule, Offset(x, 0f), Offset(x, y), 1.5.dp.toPx())
+                if (connectDown) drawLine(c.rule, Offset(x, y), Offset(x, size.height), 1.5.dp.toPx())
+                val nodeColor = accent.copy(alpha = pulse)
+                val r = 5.dp.toPx()
+                if (message.write) {
+                    drawRect(nodeColor, Offset(x - r, y - r), Size(2 * r, 2 * r))
+                } else {
+                    drawCircle(nodeColor, r, Offset(x, y), style = Stroke(2.dp.toPx()))
+                }
+            }
+            .clickable(enabled = hasResult, onClickLabel = if (expanded) "Collapse result" else "Expand result") {
+                expanded = !expanded
+            }
+            .padding(start = ToolInset, end = 20.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                message.toolName ?: "tool",
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonoFamily, fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+                textDecoration = if (message.denied) TextDecoration.LineThrough else null,
+            )
+            val args = summarizeArgs(message.toolArgs)
+            if (args.isNotEmpty()) {
+                Text(
+                    args,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 12.sp),
+                    color = c.subdued,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false).padding(start = 8.dp),
+                )
+            }
+            if (message.denied) {
+                Text("denied", style = MaterialTheme.typography.bodySmall, color = c.subdued, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+        if (hasResult) {
+            if (expanded) {
+                val lines = message.text.lines()
+                val shown = lines.take(MaxExpandedLines).joinToString("\n")
+                SelectionContainer {
+                    Text(
+                        if (lines.size > MaxExpandedLines) shown + "\n… ${lines.size - MaxExpandedLines} more lines" else shown,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 12.sp, lineHeight = 17.sp),
+                        color = if (failed) c.danger else MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(top = 6.dp).fillMaxWidth().background(c.surface2, RoundedCornerShape(6.dp)).padding(8.dp),
+                    )
+                }
+            } else {
+                Text(
+                    resultPreview(message.text),
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 12.sp),
+                    color = if (failed) c.danger else c.subdued,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+    }
+}
+
+/** `{"ns":"system","key":"x"}` -> `system x`. Raw text if it isn't a JSON object. */
+private fun summarizeArgs(json: String?): String {
+    if (json.isNullOrBlank() || json == "{}") return ""
+    return try {
+        (Json.parseToJsonElement(json) as? JsonObject)?.values
+            ?.joinToString(" ") { (it as? JsonPrimitive)?.content ?: it.toString() }
+            ?: json
+    } catch (_: Exception) {
+        json
+    }
+}
+
+private fun resultPreview(text: String): String {
+    val lines = text.lines().filter { it.isNotBlank() }
+    val first = lines.firstOrNull().orEmpty().trim()
+    return if (lines.size > 1) "$first  +${lines.size - 1} lines" else first
+}
+
+// ---- composer ----------------------------------------------------------------
 
 @Composable
 private fun Composer(viewModel: ChatViewModel) {
-    Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
+    val c = Harness.colors
+    val running = viewModel.isRunning
+    val canSend = running || viewModel.input.isNotBlank()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .background(c.surface2, RoundedCornerShape(24.dp))
+            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Box(Modifier.weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.CenterStart) {
+            BasicTextField(
                 value = viewModel.input,
                 onValueChange = { viewModel.input = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Ask the device something…") },
-                maxLines = 4,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    Box {
+                        if (viewModel.input.isEmpty()) {
+                            Text("Ask the device…", style = MaterialTheme.typography.bodyLarge, color = c.subdued)
+                        }
+                        inner()
+                    }
+                },
             )
-            if (viewModel.isRunning) {
-                Button(onClick = { viewModel.cancel() }, modifier = Modifier.padding(start = 8.dp)) { Text("Stop") }
-            } else {
-                Button(onClick = { viewModel.send() }, modifier = Modifier.padding(start = 8.dp)) { Text("Send") }
+        }
+        val onPrimary = MaterialTheme.colorScheme.onPrimary
+        Box(
+            Modifier
+                .padding(start = 4.dp)
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (canSend) MaterialTheme.colorScheme.primary else c.rule)
+                .semantics { contentDescription = if (running) "Stop" else "Send" }
+                .clickable(enabled = canSend, role = Role.Button) {
+                    if (running) viewModel.cancel() else viewModel.send()
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.size(20.dp)) {
+                val stroke = 2.dp.toPx()
+                if (running) {
+                    drawRoundRect(onPrimary, Offset(size.width * 0.2f, size.height * 0.2f), Size(size.width * 0.6f, size.height * 0.6f), CornerRadius(2.dp.toPx()))
+                } else {
+                    val cx = size.width / 2
+                    drawLine(onPrimary, Offset(cx, size.height * 0.85f), Offset(cx, size.height * 0.15f), stroke, StrokeCap.Round)
+                    drawLine(onPrimary, Offset(cx, size.height * 0.15f), Offset(cx - 6.dp.toPx(), size.height * 0.15f + 6.dp.toPx()), stroke, StrokeCap.Round)
+                    drawLine(onPrimary, Offset(cx, size.height * 0.15f), Offset(cx + 6.dp.toPx(), size.height * 0.15f + 6.dp.toPx()), stroke, StrokeCap.Round)
+                }
             }
         }
     }
 }
 
+// ---- icons (drawn, no icon dependency) ----------------------------------------
+
 @Composable
-private fun ApprovalDialog(pending: PendingApproval, onRespond: (ApprovalResponse) -> Unit) {
-    AlertDialog(
-        onDismissRequest = { onRespond(ApprovalResponse.DENY) },
-        title = { Text("Approve ${pending.toolName}?") },
-        text = {
-            Column {
-                Text("The agent wants to run a write action.", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    pending.argumentsJson,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.padding(top = 8.dp).background(MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small).padding(8.dp),
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = { onRespond(ApprovalResponse.ALLOW_ONCE) }) { Text("Allow once") } },
-        dismissButton = {
-            Row {
-                if (pending.canAlwaysAllow) {
-                    TextButton(onClick = { onRespond(ApprovalResponse.ALWAYS_ALLOW) }) { Text("Always") }
-                }
-                TextButton(onClick = { onRespond(ApprovalResponse.DENY) }) { Text("Deny") }
-            }
-        },
-    )
+private fun PlusIcon(color: Color) {
+    Canvas(Modifier.size(20.dp)) {
+        val s = 2.dp.toPx()
+        drawLine(color, Offset(size.width / 2, 2.dp.toPx()), Offset(size.width / 2, size.height - 2.dp.toPx()), s, StrokeCap.Round)
+        drawLine(color, Offset(2.dp.toPx(), size.height / 2), Offset(size.width - 2.dp.toPx(), size.height / 2), s, StrokeCap.Round)
+    }
+}
+
+@Composable
+private fun SlidersIcon(color: Color, background: Color) {
+    Canvas(Modifier.size(20.dp)) {
+        val s = 2.dp.toPx()
+        listOf(0.2f to 0.3f, 0.5f to 0.7f, 0.8f to 0.45f).forEach { (y, knob) ->
+            val py = size.height * y
+            drawLine(color, Offset(1.dp.toPx(), py), Offset(size.width - 1.dp.toPx(), py), s, StrokeCap.Round)
+            drawCircle(background, 3.5.dp.toPx(), Offset(size.width * knob, py))
+            drawCircle(color, 3.5.dp.toPx(), Offset(size.width * knob, py), style = Stroke(s))
+        }
+    }
 }
