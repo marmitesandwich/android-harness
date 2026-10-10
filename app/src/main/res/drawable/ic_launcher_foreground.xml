@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A READ ring and a WRITE square joined by a trace line: the same mark as the in-app trace rail. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M42,50 L42,72 L60,72"
+        android:strokeColor="#98A6B3"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M32,40a10,10 0,1 1,20 0a10,10 0,1 1,-20 0z"
+        android:strokeColor="#4CC9A4"
+        android:strokeWidth="5" />
+    <path
+        android:fillColor="#FF8A4C"
+        android:pathData="M60,64h16v16h-16z" />
+</vector>
