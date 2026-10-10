@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Harness</string>
+    <string name="accessibility_service_label">Harness UI control</string>
+    <string name="accessibility_service_description">Lets the Harness agent read the screen and perform taps, swipes and typing. Enabled only by you; disabled when you turn the service off.</string>
+</resources>
