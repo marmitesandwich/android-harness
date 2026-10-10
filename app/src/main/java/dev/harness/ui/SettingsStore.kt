@@ -6,6 +6,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
 /** Persists LLM configuration. The API key is encrypted at rest. */
+@Suppress("DEPRECATION") // EncryptedSharedPreferences is the agreed storage; the replacement API is not yet stable.
 class SettingsStore(context: Context) {
 
     private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
