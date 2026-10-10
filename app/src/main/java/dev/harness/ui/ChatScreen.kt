@@ -1,5 +1,6 @@
 package dev.harness.ui
 
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -44,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,12 +70,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.harness.ui.theme.Harness
 import dev.harness.ui.theme.MonoFamily
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-private val Gutter = 26.dp // x of the trace rail
-private val ToolInset = 44.dp // where tool text starts, right of the rail
+private val AiStart = 44.dp // the AI column sits on the right: indented from the left edge
+private val Gutter = 50.dp // x of the trace rail
+private val ToolInset = 68.dp // where tool text starts, right of the rail
 
 @Composable
 fun ChatScreen(
@@ -94,7 +98,12 @@ fun ChatScreen(
             if (viewModel.messages.isEmpty()) {
                 EmptyState(viewModel)
             } else {
-                MessageList(viewModel.messages)
+                val last = viewModel.messages.lastOrNull()
+                // Busy, but nothing visibly streaming or running: the model is thinking.
+                val thinking = viewModel.isRunning && viewModel.pendingApproval == null &&
+                    !(last?.kind == UiMessage.Kind.ASSISTANT && last.streaming) &&
+                    !(last?.kind == UiMessage.Kind.TOOL && last.running)
+                MessageList(viewModel.messages, thinking)
             }
         }
         Composer(viewModel)
@@ -115,15 +124,18 @@ private fun TopBar(viewModel: ChatViewModel, onOpenSettings: () -> Unit) {
         Modifier.fillMaxWidth().padding(start = 20.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
-            Text("Harness", style = MaterialTheme.typography.titleLarge)
-            Text(
-                viewModel.modelName,
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 11.sp),
-                color = c.subdued,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            HarnessMark(Modifier.size(30.dp))
+            Column(Modifier.padding(start = 12.dp)) {
+                Text("Harness", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    viewModel.modelName,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 11.sp),
+                    color = c.subdued,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         StatusDots(status)
         IconButton(
@@ -220,11 +232,12 @@ private fun EmptyState(viewModel: ChatViewModel) {
 // ---- conversation ------------------------------------------------------------
 
 @Composable
-private fun MessageList(messages: List<UiMessage>) {
+private fun MessageList(messages: List<UiMessage>, thinking: Boolean) {
     val state = rememberLazyListState()
     val tail = messages.lastOrNull()
-    LaunchedEffect(messages.size, tail?.text?.length) {
-        if (messages.isNotEmpty()) state.scrollToItem(messages.lastIndex)
+    LaunchedEffect(messages.size, tail?.text?.length, thinking) {
+        val count = messages.size + if (thinking) 1 else 0
+        if (count > 0) state.scrollToItem(count - 1)
     }
     LazyColumn(state = state, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 8.dp)) {
         itemsIndexed(messages, key = { _, m -> m.id }) { index, message ->
@@ -239,21 +252,69 @@ private fun MessageList(messages: List<UiMessage>) {
                 )
             }
         }
+        if (thinking) {
+            item(key = "thinking") { ThinkingRow(connectUp = tail?.kind == UiMessage.Kind.TOOL) }
+        }
+    }
+}
+
+/** Spinner node on the trace rail plus elapsed seconds; shown while the model is working silently. */
+@Composable
+private fun ThinkingRow(connectUp: Boolean) {
+    val c = Harness.colors
+    val seconds by produceState(0) {
+        while (true) { delay(1000); value += 1 }
+    }
+    val angle by rememberInfiniteTransition(label = "thinking").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing)),
+        label = "angle",
+    )
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = "Thinking, $seconds seconds" }
+            .drawBehind {
+                val x = Gutter.toPx()
+                val y = 17.dp.toPx()
+                if (connectUp) drawLine(c.rule, Offset(x, 0f), Offset(x, y), 1.5.dp.toPx())
+                val r = 5.dp.toPx()
+                // Faint full ring with a bright 100-degree arc sweeping round it.
+                drawCircle(c.rule, r, Offset(x, y), style = Stroke(2.dp.toPx()))
+                drawArc(
+                    color = c.read,
+                    startAngle = angle,
+                    sweepAngle = 100f,
+                    useCenter = false,
+                    topLeft = Offset(x - r, y - r),
+                    size = Size(2 * r, 2 * r),
+                    style = Stroke(2.dp.toPx(), cap = StrokeCap.Round),
+                )
+            }
+            .padding(start = ToolInset, end = 20.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Thinking" + if (seconds > 0) " ${seconds}s" else "",
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = MonoFamily, fontSize = 12.sp),
+            color = c.subdued,
+        )
     }
 }
 
 @Composable
 private fun UserBlock(message: UiMessage) {
     Box(
-        Modifier.fillMaxWidth().padding(start = 56.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
-        contentAlignment = Alignment.CenterEnd,
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 56.dp, top = 12.dp, bottom = 12.dp),
+        contentAlignment = Alignment.CenterStart,
     ) {
         SelectionContainer {
             Text(
                 message.text,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier
-                    .background(Harness.colors.surface2, RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp))
+                    .background(Harness.colors.surface2, RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp))
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             )
         }
@@ -262,7 +323,7 @@ private fun UserBlock(message: UiMessage) {
 
 @Composable
 private fun Prose(message: UiMessage) {
-    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+    Box(Modifier.fillMaxWidth().padding(start = AiStart, end = 20.dp, top = 8.dp, bottom = 8.dp)) {
         SelectionContainer {
             Markdown(if (message.streaming) message.text + " ▍" else message.text.ifEmpty { "…" })
         }
@@ -272,7 +333,7 @@ private fun Prose(message: UiMessage) {
 @Composable
 private fun ErrorBlock(message: UiMessage) {
     val c = Harness.colors
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(horizontal = 20.dp, vertical = 8.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = AiStart, end = 20.dp, top = 8.dp, bottom = 8.dp)) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(c.danger))
         SelectionContainer {
             Text(message.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 10.dp))
@@ -477,5 +538,18 @@ private fun SlidersIcon(color: Color, background: Color) {
             drawCircle(background, 3.5.dp.toPx(), Offset(size.width * knob, py))
             drawCircle(color, 3.5.dp.toPx(), Offset(size.width * knob, py), style = Stroke(s))
         }
+    }
+}
+
+/** The app mark (same shapes as the launcher icon): a READ ring and a WRITE square on one trace line. */
+@Composable
+private fun HarnessMark(modifier: Modifier = Modifier) {
+    val c = Harness.colors
+    Canvas(modifier) {
+        val k = size.width / 52f // icon geometry lives in a 52-unit box
+        drawLine(c.subdued, Offset(14 * k, 22 * k), Offset(14 * k, 44 * k), 3.5f * k, StrokeCap.Round)
+        drawLine(c.subdued, Offset(14 * k, 44 * k), Offset(32 * k, 44 * k), 3.5f * k, StrokeCap.Round)
+        drawCircle(c.read, 10 * k, Offset(14 * k, 12 * k), style = Stroke(5 * k))
+        drawRect(c.write, Offset(32 * k, 36 * k), Size(16 * k, 16 * k))
     }
 }
