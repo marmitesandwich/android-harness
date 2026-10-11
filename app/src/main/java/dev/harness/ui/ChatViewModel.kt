@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.harness.agent.AgentEvent
 import dev.harness.agent.AgentLoop
 import dev.harness.agent.ApprovalGate
+import dev.harness.agent.DEFAULT_MAX_STEPS
+import dev.harness.agent.FinishReason
 import dev.harness.agent.ApprovalPrompt
 import dev.harness.agent.ApprovalResponse
 import dev.harness.backend.HarnessAccessibilityService
@@ -164,7 +166,17 @@ class ChatViewModel(
                 _messages += UiMessage(newId(), UiMessage.Kind.ERROR, event.message)
             }
 
-            is AgentEvent.Finished -> finishStreaming()
+            is AgentEvent.Finished -> {
+                finishStreaming()
+                // A silent stop looks like a hang; say why the loop ended.
+                val note = when {
+                    event.reason == FinishReason.MAX_STEPS -> "Stopped after $DEFAULT_MAX_STEPS steps. Send a message to continue."
+                    event.reason == FinishReason.COMPLETED && _messages.lastOrNull()?.kind == UiMessage.Kind.TOOL ->
+                        "The model replied with nothing after the last tool. Send a message to continue."
+                    else -> null
+                }
+                note?.let { _messages += UiMessage(newId(), UiMessage.Kind.ERROR, it) }
+            }
         }
     }
 

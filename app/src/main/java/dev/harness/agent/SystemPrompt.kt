@@ -1,7 +1,7 @@
 package dev.harness.agent
 
 /** Default number of LLM round-trips before the loop stops. */
-const val DEFAULT_MAX_STEPS = 15
+const val DEFAULT_MAX_STEPS = 40
 
 /** Default cap on a single tool result before truncation. */
 const val DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024
