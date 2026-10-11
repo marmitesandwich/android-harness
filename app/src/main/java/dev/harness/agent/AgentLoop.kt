@@ -39,6 +39,7 @@ class AgentLoop(
         var step = 0
         while (step < maxSteps) {
             step++
+            emit(AgentEvent.Step(step, maxSteps))
 
             val assistantText = StringBuilder()
             var calls: List<ToolCall> = emptyList()

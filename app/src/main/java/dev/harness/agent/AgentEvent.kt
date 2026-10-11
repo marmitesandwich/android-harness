@@ -26,6 +26,9 @@ sealed interface AgentEvent {
         val denied: Boolean = false,
     ) : AgentEvent
 
+    /** A model round-trip is starting: step [n] of [max]. */
+    data class Step(val n: Int, val max: Int) : AgentEvent
+
     /** The loop ended normally. */
     data class Finished(val reason: FinishReason) : AgentEvent
 

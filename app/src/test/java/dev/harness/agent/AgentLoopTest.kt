@@ -128,6 +128,7 @@ class AgentLoopTest {
         val events = loop.run(mutableListOf(ChatMessage.user("x"))).toList()
 
         assertEquals(FinishReason.MAX_STEPS, (events.last() as AgentEvent.Finished).reason)
+        assertEquals(listOf(1, 2, 3), events.filterIsInstance<AgentEvent.Step>().map { it.n })
         assertEquals(3, tool.invocations)
         assertEquals(3, llm.requests.size)
     }

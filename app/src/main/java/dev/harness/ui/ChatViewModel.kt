@@ -1,5 +1,6 @@
 package dev.harness.ui
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -166,7 +167,16 @@ class ChatViewModel(
                 _messages += UiMessage(newId(), UiMessage.Kind.ERROR, event.message)
             }
 
+            is AgentEvent.Step -> {
+                Log.i(TAG, "step ${event.n}/${event.max}")
+                // Warn once, a fifth of the budget before the cap.
+                if (event.n == event.max - event.max / 5) {
+                    _messages += UiMessage(newId(), UiMessage.Kind.ERROR, "${event.max - event.n} steps left before this run stops.")
+                }
+            }
+
             is AgentEvent.Finished -> {
+                Log.i(TAG, "finished ${event.reason}")
                 finishStreaming()
                 // A silent stop looks like a hang; say why the loop ended.
                 val note = when {
@@ -197,6 +207,8 @@ class ChatViewModel(
     private fun newId(): String = UUID.randomUUID().toString()
 
     companion object {
+        private const val TAG = "Harness"
+
         fun factory(app: HarnessApp) = viewModelFactory {
             initializer { ChatViewModel(app.settings, app.shell, app.uiBackend) }
         }
