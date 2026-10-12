@@ -14,6 +14,7 @@ import dev.harness.agent.AgentLoop
 import dev.harness.agent.ApprovalGate
 import dev.harness.agent.DEFAULT_MAX_STEPS
 import dev.harness.agent.FinishReason
+import dev.harness.agent.SituationStarter
 import dev.harness.agent.ApprovalPrompt
 import dev.harness.agent.ApprovalResponse
 import dev.harness.backend.ClipboardBackend
@@ -61,6 +62,24 @@ class ChatViewModel(
 
     /** Past prompts to mix into the empty-state examples. */
     val promptHistory: List<PastPrompt> get() = settings.promptHistory
+
+    private val situation = SituationStarter(shell, llm = {
+        if (settings.apiKey.isBlank()) null
+        else OpenAiCompatClient(
+            baseUrl = settings.baseUrl,
+            apiKey = settings.apiKey,
+            model = settings.model,
+            sessionId = newSessionId(),
+        )
+    })
+
+    /** One example prompt written for the phone's current state; null until the model answers, or if it cannot. */
+    var tunedStarter by mutableStateOf<String?>(null)
+        private set
+
+    fun refreshTunedStarter() {
+        viewModelScope.launch { tunedStarter = situation.suggest() }
+    }
 
     /** Shown in the top bar; re-read whenever [refreshStatus] runs. */
     val modelName: String get() = settings.model

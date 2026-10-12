@@ -61,6 +61,10 @@ val StarterPrompts = listOf(
 @Serializable
 data class PastPrompt(val text: String, val count: Int = 1)
 
+/** [base] with [tuned] in front, replacing the last pick so the list keeps its length. */
+fun withTuned(base: List<String>, tuned: String?): List<String> =
+    if (tuned == null || tuned in base) base else listOf(tuned) + base.dropLast(1)
+
 /** Past prompts kept for the empty state. */
 const val MAX_PROMPT_HISTORY = 50
 

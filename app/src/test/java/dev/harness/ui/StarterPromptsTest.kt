@@ -99,3 +99,23 @@ class PromptHistoryTest {
         assertEquals(3, picked.size)
     }
 }
+
+class WithTunedTest {
+
+    @Test
+    fun `the tuned prompt goes first and the list keeps its length`() {
+        assertEquals(listOf("tuned", "a", "b"), withTuned(listOf("a", "b", "c"), "tuned"))
+    }
+
+    @Test
+    fun `no tuned prompt, or one already shown, leaves the picks alone`() {
+        val base = listOf("a", "b", "c")
+        assertEquals(base, withTuned(base, null))
+        assertEquals(base, withTuned(base, "b"))
+    }
+
+    @Test
+    fun `an empty pool still shows the tuned prompt`() {
+        assertEquals(listOf("tuned"), withTuned(emptyList(), "tuned"))
+    }
+}
