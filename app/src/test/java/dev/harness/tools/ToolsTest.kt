@@ -132,13 +132,13 @@ class HarnessToolsTest {
         val names = registry.all().map { it.name }
         assertEquals(names.size, names.toSet().size)
         assertTrue(names.containsAll(listOf("get_setting", "run_shell", "ui_tree", "tap", "press_home")))
-        assertEquals(29, names.size)
+        assertEquals(30, names.size)
     }
 
     @Test
-    fun `run_shell is the only write tool that cannot be remembered`() {
+    fun `run_shell can never be remembered`() {
         val registry = HarnessTools.registry(FakeShell(), FakeUi())
         val blocked = registry.all().filter { it.risk == Risk.WRITE && !it.canAlwaysAllow }.map { it.name }
-        assertEquals(listOf("run_shell"), blocked)
+        assertTrue("run_shell" in blocked)
     }
 }

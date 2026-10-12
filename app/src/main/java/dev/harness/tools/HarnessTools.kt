@@ -3,6 +3,7 @@ package dev.harness.tools
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
+import dev.harness.tools.shell.WriteFileTool
 import dev.harness.tools.shell.ListFilesTool
 import dev.harness.tools.shell.ReadFileTool
 import dev.harness.tools.shell.StartIntentTool
@@ -54,6 +55,7 @@ object HarnessTools {
             ForceStopTool(shell),
             RunShellTool(shell),
             StartIntentTool(shell),
+            WriteFileTool(shell),
             // Accessibility READ
             UiTreeTool(ui),
             FindElementTool(ui),
