@@ -55,6 +55,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        viewModel.setAppVisible(true)
+    }
+
+    override fun onStop() {
+        viewModel.setAppVisible(false)
+        super.onStop()
+    }
+
     override fun onResume() {
         super.onResume()
         viewModel.refreshStatus()

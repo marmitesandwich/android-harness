@@ -1,12 +1,14 @@
 package dev.harness.ui
 
 import android.app.Application
+import dev.harness.backend.AccessibilityOverlayBackend
 import dev.harness.backend.AccessibilityUiBackend
 import dev.harness.backend.AndroidClipboardBackend
 import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.FileNotesStore
 import dev.harness.backend.HttpFetcher
 import dev.harness.backend.NotesStore
+import dev.harness.backend.OverlayBackend
 import dev.harness.backend.OkHttpFetcher
 import dev.harness.backend.ShizukuShellBackend
 import dev.harness.backend.ShellBackend
@@ -24,6 +26,9 @@ class HarnessApp : Application() {
     lateinit var uiBackend: UiBackend
         private set
 
+    lateinit var overlay: OverlayBackend
+        private set
+
     lateinit var notes: NotesStore
         private set
 
@@ -38,6 +43,7 @@ class HarnessApp : Application() {
         settings = SettingsStore(this)
         shell = ShizukuShellBackend(this)
         uiBackend = AccessibilityUiBackend(screenshotDir = { cacheDir })
+        overlay = AccessibilityOverlayBackend()
         clipboard = AndroidClipboardBackend(this)
         http = OkHttpFetcher()
         notes = FileNotesStore { java.io.File(filesDir, "notes.txt") }

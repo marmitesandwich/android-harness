@@ -13,7 +13,9 @@ class HarnessAccessibilityService : AccessibilityService() {
         instance = this
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) windowChangeListener?.invoke()
+    }
 
     override fun onInterrupt() = Unit
 
@@ -28,5 +30,9 @@ class HarnessAccessibilityService : AccessibilityService() {
             private set
 
         val connected: Boolean get() = instance != null
+
+        /** Called on the main thread when a different window comes to the front. */
+        @Volatile
+        var windowChangeListener: (() -> Unit)? = null
     }
 }

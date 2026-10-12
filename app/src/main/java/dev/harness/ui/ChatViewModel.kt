@@ -19,7 +19,9 @@ import dev.harness.agent.ApprovalResponse
 import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.HarnessAccessibilityService
 import dev.harness.backend.HttpFetcher
+import dev.harness.backend.ApprovalCard
 import dev.harness.backend.NotesStore
+import dev.harness.backend.OverlayBackend
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.llm.ChatMessage
@@ -37,6 +39,7 @@ class ChatViewModel(
     private val settings: SettingsStore,
     private val shell: ShellBackend,
     private val uiBackend: UiBackend,
+    private val overlay: OverlayBackend,
     private val notes: NotesStore,
     private val clipboard: ClipboardBackend,
     private val http: HttpFetcher,
@@ -54,7 +57,7 @@ class ChatViewModel(
     var status by mutableStateOf(BackendStatus())
         private set
 
-    private val registry by lazy { HarnessTools.registry(shell, uiBackend, notes, clipboard, http) }
+    private val registry by lazy { HarnessTools.registry(shell, uiBackend, overlay, notes, clipboard, http) }
 
     /** Past prompts to mix into the empty-state examples. */
     val promptHistory: List<PastPrompt> get() = settings.promptHistory
@@ -71,13 +74,31 @@ class ChatViewModel(
     private val prompt = ApprovalPrompt { tool, argumentsJson ->
         val deferred = CompletableDeferred<ApprovalResponse>()
         approvalDeferred = deferred
-        pendingApproval = PendingApproval(tool.name, argumentsJson, tool.canAlwaysAllow)
+        val pending = PendingApproval(tool.name, argumentsJson, tool.canAlwaysAllow)
+        pendingApproval = pending
+        // If the agent has taken the user to another app, Harness's own sheet is out of sight.
+        if (!appVisible) showApprovalOverlay(pending)
         try {
             deferred.await()
         } finally {
+            overlay.dismissApproval()
             pendingApproval = null
             approvalDeferred = null
         }
+    }
+
+    /** Set by the activity. While Harness is out of sight, approvals are drawn over the current app instead. */
+    private var appVisible = true
+
+    fun setAppVisible(visible: Boolean) {
+        appVisible = visible
+        if (visible) overlay.dismissApproval() else pendingApproval?.let(::showApprovalOverlay)
+    }
+
+    private fun showApprovalOverlay(pending: PendingApproval) {
+        if (!overlay.available) return
+        val card = ApprovalCard(actionTitle(pending.toolName), approvalSummary(pending.toolName, pending.argumentsJson), pending.canAlwaysAllow)
+        overlay.showApproval(card) { respondToApproval(it) }
     }
 
     fun respondToApproval(response: ApprovalResponse) {
@@ -220,7 +241,7 @@ class ChatViewModel(
         private const val TAG = "Harness"
 
         fun factory(app: HarnessApp) = viewModelFactory {
-            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.notes, app.clipboard, app.http) }
+            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.overlay, app.notes, app.clipboard, app.http) }
         }
     }
 }

@@ -3,6 +3,7 @@ package dev.harness.tools
 import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.HttpFetcher
 import dev.harness.backend.NotesStore
+import dev.harness.backend.OverlayBackend
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
@@ -29,6 +30,7 @@ import dev.harness.tools.shell.LogcatTool
 import dev.harness.tools.shell.PutSettingTool
 import dev.harness.tools.shell.RunShellTool
 import dev.harness.tools.ui.FindElementTool
+import dev.harness.tools.ui.HighlightTool
 import dev.harness.tools.ui.PressBackTool
 import dev.harness.tools.ui.PressHomeTool
 import dev.harness.tools.ui.ScreenshotTool
@@ -44,7 +46,7 @@ import dev.harness.tools.wait.WaitTool
 
 /** Builds the v1 tool set over the given backends. */
 object HarnessTools {
-    fun registry(shell: ShellBackend, ui: UiBackend, notes: NotesStore,
+    fun registry(shell: ShellBackend, ui: UiBackend, overlay: OverlayBackend, notes: NotesStore,
         clipboard: ClipboardBackend,
         http: HttpFetcher,
     ): ToolRegistry = ToolRegistry(
@@ -77,6 +79,7 @@ object HarnessTools {
             // Accessibility READ
             UiTreeTool(ui),
             FindElementTool(ui),
+            HighlightTool(ui, overlay),
             ScreenshotTool(ui),
             // Accessibility WRITE
             TapTool(ui),
