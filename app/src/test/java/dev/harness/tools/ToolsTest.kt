@@ -132,7 +132,7 @@ class HarnessToolsTest {
         val names = registry.all().map { it.name }
         assertEquals(names.size, names.toSet().size)
         assertTrue(names.containsAll(listOf("get_setting", "run_shell", "ui_tree", "tap", "press_home")))
-        assertEquals(27, names.size)
+        assertEquals(29, names.size)
     }
 
     @Test
