@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonObject
 internal const val ACCESSIBILITY_UNAVAILABLE =
     "ERROR: accessibility service is not enabled (Settings > Accessibility > Harness UI control)."
 
-private suspend fun UiBackend.guard(): String? = if (available) null else ACCESSIBILITY_UNAVAILABLE
+internal suspend fun UiBackend.guard(): String? = if (available) null else ACCESSIBILITY_UNAVAILABLE
 
 /** Dump the current window's view tree as indented text. */
 class UiTreeTool(private val ui: UiBackend) : Tool {

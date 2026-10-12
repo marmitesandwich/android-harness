@@ -12,6 +12,7 @@ import dev.harness.tools.shell.ListPackagesTool
 import dev.harness.tools.shell.LogcatTool
 import dev.harness.tools.shell.PutSettingTool
 import dev.harness.tools.shell.RunShellTool
+import dev.harness.tools.ui.FindElementTool
 import dev.harness.tools.ui.PressBackTool
 import dev.harness.tools.ui.PressHomeTool
 import dev.harness.tools.ui.ScreenshotTool
@@ -40,6 +41,7 @@ object HarnessTools {
             RunShellTool(shell),
             // Accessibility READ
             UiTreeTool(ui),
+            FindElementTool(ui),
             ScreenshotTool(ui),
             // Accessibility WRITE
             TapTool(ui),
