@@ -189,7 +189,7 @@ Run after installing:
 
 | Package | Responsibility |
 |---|---|
-| `ui/` | Compose chat screen, approval card, settings, status banner |
+| `ui/` | Compose chat screen, approval card, settings, status banner, markdown replies (tables, lists, code, bold, italic) |
 | `agent/` | `AgentLoop`, tiered `ApprovalGate`, system prompt |
 | `llm/` | `LlmClient` + `OpenAiCompatClient` (OkHttp SSE) |
 | `tools/` | `Tool` interface, `ToolRegistry`, shell, UI, wait, notes, clipboard and fetch tools |
