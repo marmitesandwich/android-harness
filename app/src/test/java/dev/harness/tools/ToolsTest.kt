@@ -128,16 +128,16 @@ class HarnessToolsTest {
 
     @Test
     fun `registry exposes the full v1 tool set without duplicates`() {
-        val registry = HarnessTools.registry(FakeShell(), FakeUi(), InMemoryNotes(), InMemoryClipboard())
+        val registry = HarnessTools.registry(FakeShell(), FakeUi(), InMemoryNotes(), InMemoryClipboard(), FakeHttp())
         val names = registry.all().map { it.name }
         assertEquals(names.size, names.toSet().size)
         assertTrue(names.containsAll(listOf("get_setting", "run_shell", "ui_tree", "tap", "press_home")))
-        assertEquals(39, names.size)
+        assertEquals(40, names.size)
     }
 
     @Test
     fun `run_shell can never be remembered`() {
-        val registry = HarnessTools.registry(FakeShell(), FakeUi(), InMemoryNotes(), InMemoryClipboard())
+        val registry = HarnessTools.registry(FakeShell(), FakeUi(), InMemoryNotes(), InMemoryClipboard(), FakeHttp())
         val blocked = registry.all().filter { it.risk == Risk.WRITE && !it.canAlwaysAllow }.map { it.name }
         assertTrue("run_shell" in blocked)
     }

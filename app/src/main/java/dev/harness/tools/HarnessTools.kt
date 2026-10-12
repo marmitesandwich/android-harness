@@ -1,6 +1,7 @@
 package dev.harness.tools
 
 import dev.harness.backend.ClipboardBackend
+import dev.harness.backend.HttpFetcher
 import dev.harness.backend.NotesStore
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
@@ -45,6 +46,7 @@ import dev.harness.tools.wait.WaitTool
 object HarnessTools {
     fun registry(shell: ShellBackend, ui: UiBackend, notes: NotesStore,
         clipboard: ClipboardBackend,
+        http: HttpFetcher,
     ): ToolRegistry = ToolRegistry(
         listOf(
             // Shell READ
@@ -88,6 +90,7 @@ object HarnessTools {
             NotesTool(notes),
             ClipboardGetTool(clipboard),
             ClipboardSetTool(clipboard),
+            HttpFetchTool(http),
             // Waiting
             WaitTool(),
             WaitForLogTool(shell),
