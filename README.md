@@ -271,6 +271,20 @@ without sleeping.
 - `highlight` is read-tier because it only draws. It cannot tap, and its window
   does not take touches.
 
+## Known limitations
+
+- **Markdown rendering is hand-written and should move to a proper library.**
+  `ui/Markdown.kt` handles paragraphs, bullets, fenced code, tables, rules, bold,
+  italic and inline code, and nothing else: no links, blockquotes, nested lists or
+  numbered-list restarts. Every new reply format means more parser code. The
+  leading replacement is
+  [mikepenz/multiplatform-markdown-renderer](https://github.com/mikepenz/multiplatform-markdown-renderer)
+  (tables, streaming of half-finished markdown, themeable Material 3 module). Before
+  switching, check that it builds with Kotlin 2.2.10, AGP 9.4.1 and the Compose BOM
+  here (it is built on JetBrains Compose Multiplatform), that wide tables scroll
+  sideways, and that it can be styled to match the app's fonts and colors. If it
+  clashes, extend `ui/Markdown.kt` instead.
+
 ## License
 
 The code is MIT licensed, see [LICENSE](LICENSE).

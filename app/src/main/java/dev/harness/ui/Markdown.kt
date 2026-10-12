@@ -33,6 +33,10 @@ import dev.harness.ui.theme.MonoFamily
 
 // ponytail: only what models actually emit (paragraphs, bullets, fenced code, tables, rules, **bold**,
 // *italic*, `code`). No links, blockquotes or nested lists; add when a real reply needs them.
+//
+// Note: this is a stopgap. Prefer switching to a maintained library (mikepenz/multiplatform-markdown-renderer
+// has tables, streaming and theming) instead of growing this file; see "Known limitations" in the README for
+// what to check first.
 internal enum class MdAlign { Start, Center, End }
 
 internal sealed interface MdBlock {
