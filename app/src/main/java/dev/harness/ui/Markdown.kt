@@ -23,6 +23,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -237,7 +238,12 @@ fun Markdown(text: String, modifier: Modifier = Modifier) {
 @Composable
 private fun MarkdownTable(table: MdBlock.Table) {
     val c = Harness.colors
-    val textStyle = MaterialTheme.typography.bodyMedium
+    // A fixed line height keeps every row the same height whatever the spans in it (monospace code is taller),
+    // which is what lets the columns, laid out independently, stay aligned.
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(
+        lineHeight = 22.sp,
+        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+    )
     Row(
         Modifier
             .clip(RoundedCornerShape(8.dp))
