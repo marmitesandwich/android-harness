@@ -14,14 +14,25 @@ Personal Android app acting as an agent harness: chat with an LLM (OpenCode Go f
 | Package | Responsibility |
 |---|---|
 | `ui/` | Compose chat screen, approval card, settings (key, model, base URL), Shizuku/Accessibility status banner |
-| `agent/` | `AgentLoop`: messages + tool schemas → LLM → if `tool_calls`: gate → execute → append `role:tool` → repeat. Max steps (default 15), cancel button. |
+| `agent/` | `AgentLoop`: messages + tool schemas → LLM → if `tool_calls`: gate → execute → append `role:tool` → repeat. Max steps (default 40), cancel button, explicit `done` tool to end a run. |
 | `llm/` | `LlmClient` interface; `OpenAiCompatClient` (OkHttp + kotlinx.serialization, SSE parser) |
 | `tools/` | `Tool { name, description, jsonSchema, risk: READ/WRITE, run(args): String }`, registry, output truncation (~N KB) |
 | `backend/` | `ShellBackend` (Shizuku UserService), `UiBackend` (AccessibilityService) |
 
 ## v1 tools
-- Shell READ: `get_setting(ns,key)`, `logcat(filter,lines)`, `dumpsys(service)`, `list_packages`, `app_info(pkg)`, `getprop`- Shell WRITE: `put_setting`, `launch_app`, `force_stop`, `run_shell`
+- Shell READ: `get_setting(ns,key)`, `logcat(filter,lines)`, `dumpsys(service)`, `list_packages`, `app_info(pkg)`, `getprop`
+- Shell WRITE: `put_setting`, `launch_app`, `force_stop`, `run_shell`
 - Accessibility: `ui_tree` (READ), `screenshot` (READ), `tap`, `swipe`, `type_text`, `press_back`, `press_home` (WRITE)
+
+## v1.1 tools (added after v1)
+- Waiting (READ, bounded to 60s): `wait`, `wait_for_log(pattern)`, `wait_for_ui(query, appears|gone)`. Block inside one call so a wait costs one step.
+- Element tools over the `ui_tree` text dump: `find_element` (READ), `tap_element`, `scroll_until` (WRITE).
+- Shell READ: `current_app`, `device_status`, `notifications`, `read_file`, `list_files` (files confined to shared storage and `/data/local/tmp`).
+- Shell WRITE: `start_intent`, `set_radio`, `write_file`, `install_apk`, `uninstall_app` (keeps data by default). `write_file`, `install_apk`, `uninstall_app` are never always-allow.
+- Private data, WRITE-gated so output cannot reach the LLM unseen: `query_contacts`, `query_calendar`, `query_sms` (never always-allow), `clipboard_get`. Also `clipboard_set`.
+- Network: `http_fetch` is WRITE-gated: a GET URL can carry data out, and tool output is untrusted.
+- Agent-side: `notes` (persistent scratchpad, READ), `done` (READ).
+- Deliberately left out: `send_sms` (use `start_intent` + `tap_element`) and `ask_user` (a plain reply already ends the turn).
 
 ## Data flow
 user msg → AgentLoop → `LlmClient.stream()` (deltas to UI) → tool_calls → Gate (READ passes; WRITE suspends on UI approval via coroutine) → `Tool.run` on `Dispatchers.IO` → tool result message → loop. Ends on plain reply, max steps, or cancel. System prompt: device is Android; read before write; explain before mutating.
