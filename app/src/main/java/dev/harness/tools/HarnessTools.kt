@@ -3,6 +3,7 @@ package dev.harness.tools
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
+import dev.harness.tools.shell.NotificationsTool
 import dev.harness.tools.shell.DeviceStatusTool
 import dev.harness.tools.shell.CurrentAppTool
 import dev.harness.tools.shell.DumpsysTool
@@ -41,6 +42,7 @@ object HarnessTools {
             GetPropTool(shell),
             CurrentAppTool(shell),
             DeviceStatusTool(shell),
+            NotificationsTool(shell),
             // Shell WRITE
             PutSettingTool(shell),
             LaunchAppTool(shell),
