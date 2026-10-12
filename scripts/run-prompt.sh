@@ -63,25 +63,47 @@ S=$(centre_of 'content-desc="Send"') || { echo "  Send not found"; exit 1; }
 tap "$S"
 
 echo "--- watching the run (approvals: $APPROVE)"
-idle=0
+# The app logs "finished <reason>" when the loop ends, so that, not the screen, says when to stop. The
+# agent may leave Harness (e.g. open Settings); an approval card is only visible when Harness is in front.
 waited=0
+last_steps=-1
+quiet=0
 while [ "$waited" -lt "$MAX_WAIT" ]; do
   sleep 3
   waited=$((waited + 3))
+  LOG=$("$ADB" logcat -d -s Harness)
+  if echo "$LOG" | grep -q ' finished '; then echo "  [${waited}s] $(echo "$LOG" | grep ' finished ' | tail -n1 | sed 's/.*Harness *: //')"; break; fi
+
+  steps=$(echo "$LOG" | grep -c 'step ')
+  if [ "$steps" != "$last_steps" ]; then last_steps=$steps; quiet=0; else quiet=$((quiet + 3)); fi
+
+  FOCUS=$("$ADB" shell dumpsys window | grep -m1 mCurrentFocus)
+  if ! echo "$FOCUS" | grep -q 'dev.harness'; then
+    # Nothing new for a while and we are elsewhere: the run may be waiting on an approval card.
+    if [ "$quiet" -ge 45 ]; then
+      echo "  [${waited}s] quiet for ${quiet}s outside Harness; bringing it forward to check for an approval"
+      "$ADB" shell am start -n dev.harness/dev.harness.ui.MainActivity >/dev/null 2>&1
+      sleep 2
+      quiet=0
+    else
+      continue
+    fi
+  fi
+
   dump_ui
   if on_screen 'text="Allow once"'; then
     label="Allow once"; [ "$APPROVE" = deny ] && label="Deny"
-    tool=$(tr '>' '\n' < "$XML" | grep -o 'text="[^"]*"' | grep -B3 'text="Deny"' | head -n1)
+    tool=$(tr '>' '
+' < "$XML" | grep -o 'text="[^"]*"' | grep -B3 'text="Deny"' | head -n1)
     C=$(centre_of "text=\"$label\"") && { echo "  [${waited}s] approval card ($tool) -> $label"; tap "$C"; }
-    idle=0
-  elif on_screen 'content-desc="Thinking'; then
-    idle=0
-  else
-    idle=$((idle + 1))
-    [ "$idle" -ge 2 ] && break
+    quiet=0
   fi
 done
 [ "$waited" -ge "$MAX_WAIT" ] && echo "  gave up after ${MAX_WAIT}s (run may still be going)"
+
+# Come back to the conversation so the final screen dump shows it.
+"$ADB" shell am start -n dev.harness/dev.harness.ui.MainActivity >/dev/null 2>&1
+sleep 2
 
 echo "--- on screen"
 dump_ui
