@@ -20,7 +20,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-private class FakeShell(
+internal class FakeShell(
     override val available: Boolean = true,
     var result: ShellResult = ShellResult(0, "ok", ""),
 ) : ShellBackend {
@@ -31,7 +31,7 @@ private class FakeShell(
     }
 }
 
-private class FakeUi(override val available: Boolean = true) : UiBackend {
+internal class FakeUi(override val available: Boolean = true) : UiBackend {
     val taps = mutableListOf<Pair<Int, Int>>()
     override suspend fun windowTree(): String = "root"
     override suspend fun screenshot(): Screenshot = Screenshot("/tmp/x.png", 1080, 1920)
@@ -132,7 +132,7 @@ class HarnessToolsTest {
         val names = registry.all().map { it.name }
         assertEquals(names.size, names.toSet().size)
         assertTrue(names.containsAll(listOf("get_setting", "run_shell", "ui_tree", "tap", "press_home")))
-        assertEquals(17, names.size)
+        assertEquals(18, names.size)
     }
 
     @Test

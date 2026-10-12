@@ -19,6 +19,7 @@ import dev.harness.tools.ui.SwipeTool
 import dev.harness.tools.ui.TapTool
 import dev.harness.tools.ui.TypeTextTool
 import dev.harness.tools.ui.UiTreeTool
+import dev.harness.tools.wait.WaitTool
 
 /** Builds the v1 tool set over the given backends. */
 object HarnessTools {
@@ -45,6 +46,8 @@ object HarnessTools {
             TypeTextTool(ui),
             PressBackTool(ui),
             PressHomeTool(ui),
+            // Waiting
+            WaitTool(),
         ),
     )
 }
