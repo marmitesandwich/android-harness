@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 /** Persists LLM configuration. The API key is encrypted at rest. */
 @Suppress("DEPRECATION") // EncryptedSharedPreferences is the agreed storage; the replacement API is not yet stable.
@@ -34,7 +36,14 @@ class SettingsStore(context: Context) {
         get() = prefs.getStringSet(KEY_ALWAYS_ALLOWED, emptySet()).orEmpty().toSet()
         set(value) = prefs.edit().putStringSet(KEY_ALWAYS_ALLOWED, value.toSet()).apply()
 
+    /** Prompts the user has sent and how often, offered again on the empty chat. Stays on this device. */
+    var promptHistory: List<PastPrompt>
+        get() = runCatching { Json.decodeFromString(PROMPT_LIST, prefs.getString(KEY_PROMPTS, "[]").orEmpty()) }
+            .getOrDefault(emptyList())
+        set(value) = prefs.edit().putString(KEY_PROMPTS, Json.encodeToString(PROMPT_LIST, value)).apply()
+
     companion object {
+        private val PROMPT_LIST = ListSerializer(PastPrompt.serializer())
         const val DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1"
 
         /** A chat-completions model; change it in Settings to match your provider. */
@@ -45,5 +54,6 @@ class SettingsStore(context: Context) {
         private const val KEY_MODEL = "model"
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_ALWAYS_ALLOWED = "always_allowed_tools"
+        private const val KEY_PROMPTS = "prompt_history"
     }
 }

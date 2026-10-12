@@ -203,7 +203,7 @@ private fun StatusRow(label: String, action: String, onClick: () -> Unit) {
 private fun EmptyState(viewModel: ChatViewModel) {
     val c = Harness.colors
     // A fresh random pick each time the empty chat appears (e.g. after New chat).
-    val starters = remember { pickStarters() }
+    val starters = remember { pickStarters(history = viewModel.promptHistory) }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.Center) {
         Text("Ask about this phone", style = MaterialTheme.typography.titleLarge.copy(fontSize = 30.sp, lineHeight = 36.sp))
         Text(
@@ -221,7 +221,7 @@ private fun EmptyState(viewModel: ChatViewModel) {
                         drawLine(c.rule, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
                     }
                     .padding(vertical = 16.dp),
-            ) { Text(prompt, style = MaterialTheme.typography.bodyLarge) }
+            ) { Text(prompt, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
     }
 }

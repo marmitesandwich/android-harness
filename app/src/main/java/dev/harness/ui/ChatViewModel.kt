@@ -56,6 +56,9 @@ class ChatViewModel(
 
     private val registry by lazy { HarnessTools.registry(shell, uiBackend, notes, clipboard, http) }
 
+    /** Past prompts to mix into the empty-state examples. */
+    val promptHistory: List<PastPrompt> get() = settings.promptHistory
+
     /** Shown in the top bar; re-read whenever [refreshStatus] runs. */
     val modelName: String get() = settings.model
 
@@ -99,6 +102,7 @@ class ChatViewModel(
         }
 
         input = ""
+        settings.promptHistory = addToHistory(settings.promptHistory, text)
         _messages += UiMessage(newId(), UiMessage.Kind.USER, text)
         conversation += ChatMessage.user(text)
 
