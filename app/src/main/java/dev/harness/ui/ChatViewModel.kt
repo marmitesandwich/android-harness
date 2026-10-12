@@ -16,6 +16,7 @@ import dev.harness.agent.DEFAULT_MAX_STEPS
 import dev.harness.agent.FinishReason
 import dev.harness.agent.ApprovalPrompt
 import dev.harness.agent.ApprovalResponse
+import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.HarnessAccessibilityService
 import dev.harness.backend.NotesStore
 import dev.harness.backend.ShellBackend
@@ -36,6 +37,7 @@ class ChatViewModel(
     private val shell: ShellBackend,
     private val uiBackend: UiBackend,
     private val notes: NotesStore,
+    private val clipboard: ClipboardBackend,
 ) : ViewModel() {
 
     private val conversation = mutableListOf<ChatMessage>()
@@ -50,7 +52,7 @@ class ChatViewModel(
     var status by mutableStateOf(BackendStatus())
         private set
 
-    private val registry by lazy { HarnessTools.registry(shell, uiBackend, notes) }
+    private val registry by lazy { HarnessTools.registry(shell, uiBackend, notes, clipboard) }
 
     /** Shown in the top bar; re-read whenever [refreshStatus] runs. */
     val modelName: String get() = settings.model
@@ -212,7 +214,7 @@ class ChatViewModel(
         private const val TAG = "Harness"
 
         fun factory(app: HarnessApp) = viewModelFactory {
-            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.notes) }
+            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.notes, app.clipboard) }
         }
     }
 }

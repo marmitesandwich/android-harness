@@ -2,6 +2,8 @@ package dev.harness.ui
 
 import android.app.Application
 import dev.harness.backend.AccessibilityUiBackend
+import dev.harness.backend.AndroidClipboardBackend
+import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.FileNotesStore
 import dev.harness.backend.NotesStore
 import dev.harness.backend.ShizukuShellBackend
@@ -23,11 +25,15 @@ class HarnessApp : Application() {
     lateinit var notes: NotesStore
         private set
 
+    lateinit var clipboard: ClipboardBackend
+        private set
+
     override fun onCreate() {
         super.onCreate()
         settings = SettingsStore(this)
         shell = ShizukuShellBackend(this)
         uiBackend = AccessibilityUiBackend(screenshotDir = { cacheDir })
+        clipboard = AndroidClipboardBackend(this)
         notes = FileNotesStore { java.io.File(filesDir, "notes.txt") }
     }
 
