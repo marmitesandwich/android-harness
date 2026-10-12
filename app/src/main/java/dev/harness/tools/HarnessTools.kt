@@ -3,6 +3,9 @@ package dev.harness.tools
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
+import dev.harness.tools.shell.SetRadioTool
+import dev.harness.tools.shell.UninstallAppTool
+import dev.harness.tools.shell.InstallApkTool
 import dev.harness.tools.shell.QuerySmsTool
 import dev.harness.tools.shell.QueryCalendarTool
 import dev.harness.tools.shell.QueryContactsTool
@@ -62,6 +65,9 @@ object HarnessTools {
             QueryContactsTool(shell),
             QueryCalendarTool(shell),
             QuerySmsTool(shell),
+            InstallApkTool(shell),
+            UninstallAppTool(shell),
+            SetRadioTool(shell),
             // Accessibility READ
             UiTreeTool(ui),
             FindElementTool(ui),
