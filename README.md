@@ -176,8 +176,10 @@ without sleeping.
 - File tools are confined to shared storage and `/data/local/tmp`; paths with
   `..` are rejected, so the shell user's wider access is not exposed.
 
-## Fonts
+## License
 
-The bundled fonts, Instrument Sans and Martian Mono, are distributed under the
-SIL Open Font License 1.1. Add their license texts alongside the fonts before
-redistributing the app.
+The code is MIT licensed, see [LICENSE](LICENSE).
+
+The bundled fonts keep their own license, the SIL Open Font License 1.1:
+Instrument Sans ([licenses/OFL-instrumentsans.txt](licenses/OFL-instrumentsans.txt))
+and Martian Mono ([licenses/OFL-martianmono.txt](licenses/OFL-martianmono.txt)).
