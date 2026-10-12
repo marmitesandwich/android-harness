@@ -38,9 +38,46 @@ The APK lands in `app/build/outputs/apk/debug/app-debug.apk`. Install with
 
 The banner disappears when all three prerequisites are satisfied.
 
+## Using it
+
+**Asking.** Type a question, or tap one of the three example prompts on the empty
+chat. The examples are picked at random from a pool of 42 each time the empty chat
+appears (open **New chat** for a fresh set). Once you have sent a few prompts of
+your own, one of the three is a past prompt, chosen more often the more you have
+used it. Your prompt history stays on the device in encrypted storage; it keeps
+the 50 most-used. Tapping an example sends it straight away.
+
+**Approving.** Anything that changes the phone, reads private data (contacts,
+calendar, texts, clipboard) or touches the network stops and shows a card with a
+plain-language title, the exact arguments, and three buttons:
+
+- **Deny**: nothing happens and the agent is told you said no.
+- **Allow once**: run it this one time.
+- **Always allow**: stop asking for that action in every chat. Undo it from
+  **Settings**. Not offered for `run_shell`, `write_file`, `install_apk`,
+  `uninstall_app` or `query_sms`.
+
+If the agent has taken you to another app (say it opened Wi-Fi settings), Harness
+is out of sight, so the same card appears **over that app**. This needs the
+accessibility service switched on. With Harness open, the card appears in the app.
+
+**Showing someone how to do something.** Ask in plain words, for example "show me
+how to turn on Bluetooth". The agent opens the right screen, then uses `highlight`
+to outline what to tap, with a short label. The outline pulses, lasts 20 seconds
+by default (up to 60), and disappears when the screen changes. It does not block
+touches, so the person taps the real button underneath. Then they return to
+Harness and ask for the next step. This is the intended way to hand the app to
+someone less technical: set up Shizuku and the accessibility service once, and
+consider **Always allow** for "Open an app" and "Open a page or screen" so opening
+screens does not need a tap each time.
+
+**Long tasks.** The agent can keep a scratchpad with `notes` that survives a new
+chat. Press **Stop** to end a run at any point. A run also ends when the model
+calls `done` or reaches the 40-step cap; the chat says which.
+
 ## Tools
 
-41 tools. **Read** tools run automatically. **Write** tools show an approve/deny
+42 tools. **Read** tools run automatically. **Write** tools show an approve/deny
 card with the exact arguments; most offer a per-tool "always allow" (see below).
 
 ### Reading the device (read)
@@ -55,6 +92,7 @@ card with the exact arguments; most offer a per-tool "always allow" (see below).
 | `read_file`, `list_files` | Files under `/sdcard`, `/storage/emulated/0`, `/data/local/tmp` only |
 | `ui_tree`, `screenshot` | Screen contents (accessibility) |
 | `find_element` | Search the screen by text, description or id, with tap coordinates |
+| `highlight` | Outline an element with a short label like "Tap Wi-Fi", drawn over any app. It only draws and cannot tap anything |
 
 ### Waiting (read)
 
@@ -127,7 +165,13 @@ Run after installing:
    logs something about Settings") and confirm one `wait_for_log` call, not a
    string of `logcat` calls.
 9. Ask it to save a note, start a new chat, and read it back with `notes`.
-10. Check the tools that parse device output on your Android version. These
+10. Ask "open the Wi-Fi settings page and highlight Wi-Fi Assistant" and confirm
+    an orange outline and a label appear over Settings, and clear when you leave
+    the screen.
+11. Ask it to open Settings and then tap something. Confirm the approval card
+    appears **over Settings** (not inside Harness) and that Allow once lets the
+    run continue.
+12. Check the tools that parse device output on your Android version. These
     commands are verified only by unit tests, not on a device:
     `device_status`, `notifications`, `query_contacts`, `query_calendar`,
     `query_sms`, `clipboard_get`.
@@ -140,7 +184,7 @@ Run after installing:
 | `agent/` | `AgentLoop`, tiered `ApprovalGate`, system prompt |
 | `llm/` | `LlmClient` + `OpenAiCompatClient` (OkHttp SSE) |
 | `tools/` | `Tool` interface, `ToolRegistry`, shell, UI, wait, notes, clipboard and fetch tools |
-| `backend/` | `ShellBackend` (Shizuku), `UiBackend` (AccessibilityService), clipboard, notes store, HTTP fetcher |
+| `backend/` | `ShellBackend` (Shizuku), `UiBackend` (AccessibilityService), `OverlayBackend` (highlight and approval card drawn over other apps), clipboard, notes store, HTTP fetcher |
 
 The agent loop sends the conversation to the model, runs any requested tools
 after gating, appends `role: tool` results, and repeats until the model replies
@@ -148,8 +192,45 @@ without tool calls, calls `done`, the step budget (default 40) is exhausted, or
 you press **Stop**. Each step is logged under the `Harness` tag, and the chat
 warns when a run is close to the cap.
 
-`tap_element`, `find_element`, `wait_for_ui` and `scroll_until` work by parsing
-the `ui_tree` text dump, so they need no extra accessibility plumbing.
+`tap_element`, `find_element`, `wait_for_ui`, `scroll_until` and `highlight` work by
+parsing the `ui_tree` text dump, so they need no extra accessibility plumbing.
+
+The overlays are accessibility-overlay windows, which need no extra permission.
+The highlight window is full-screen and untouchable. The approval card is a small
+window at the bottom that takes touches; touches outside it still reach the app
+underneath. A highlight is dropped when another window comes to the front.
+
+## Driving the app from a computer
+
+Scripts in `scripts/` drive the installed app over `adb` (set `ADB_BIN` if `adb`
+is not on your PATH). They use `uiautomator`, so they need a connected device and
+the screen unlocked.
+
+| Script | What it does |
+|---|---|
+| `install-launch.sh` | Install the debug APK over the existing one (keeps data), launch, and check for crashes |
+| `run-prompt.sh` | Send one prompt in a fresh chat, tap **Allow once** on approval cards, wait for the run to end, then print the screen and the step log |
+| `send-message.sh` | Type a prompt and send it, then print the conversation after a fixed wait |
+| `pair-shizuku.sh` | Tap **Pair** in Harness and accept the Shizuku dialog |
+| `set-model.sh` | Set the model in Settings: `MODEL=glm-5.3-flash scripts/set-model.sh` |
+| `show-conversation.sh`, `capture-harness.sh`, `wake-and-capture.sh` | Print the on-screen conversation and/or take a screenshot |
+| `dump-nodes.sh` | Diagnostic: list the composer and Send nodes with bounds |
+
+`run-prompt.sh` options, all environment variables:
+
+```bash
+PROMPT="what app is in the foreground" scripts/run-prompt.sh
+APPROVE=deny PROMPT="..." scripts/run-prompt.sh   # tap Deny instead of Allow once
+NEW_CHAT=0 ...                                      # keep the current chat
+MAX_WAIT=120 ...                                    # seconds before giving up (default 90)
+RETURN_TO_APP=0 ...                                 # stay on whatever app the agent left open
+```
+
+It ends when the app logs `finished`, so it works even when the agent leaves
+Harness. With `RETURN_TO_APP=0` the final screen dump can disturb a highlight, so
+take a screenshot yourself instead. If several tools share one phone, run it under
+a device lock. Tests that tap things change the phone for real: an approved tap on
+the Wi-Fi row turned Wi-Fi off during development.
 
 ## Testing
 
@@ -175,6 +256,11 @@ without sleeping.
   `query_sms`.
 - File tools are confined to shared storage and `/data/local/tmp`; paths with
   `..` are rejected, so the shell user's wider access is not exposed.
+- The overlay approval card needs the accessibility service, so it is only as
+  trustworthy as that service being yours. With the service off, approvals stay
+  inside Harness and a run that has left the app waits until you return.
+- `highlight` is read-tier because it only draws. It cannot tap, and its window
+  does not take touches.
 
 ## License
 
