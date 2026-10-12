@@ -3,6 +3,9 @@ package dev.harness.tools
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
+import dev.harness.tools.shell.QuerySmsTool
+import dev.harness.tools.shell.QueryCalendarTool
+import dev.harness.tools.shell.QueryContactsTool
 import dev.harness.tools.shell.WriteFileTool
 import dev.harness.tools.shell.ListFilesTool
 import dev.harness.tools.shell.ReadFileTool
@@ -56,6 +59,9 @@ object HarnessTools {
             RunShellTool(shell),
             StartIntentTool(shell),
             WriteFileTool(shell),
+            QueryContactsTool(shell),
+            QueryCalendarTool(shell),
+            QuerySmsTool(shell),
             // Accessibility READ
             UiTreeTool(ui),
             FindElementTool(ui),
