@@ -17,6 +17,7 @@ import dev.harness.tools.ui.PressBackTool
 import dev.harness.tools.ui.PressHomeTool
 import dev.harness.tools.ui.ScreenshotTool
 import dev.harness.tools.ui.SwipeTool
+import dev.harness.tools.ui.TapElementTool
 import dev.harness.tools.ui.TapTool
 import dev.harness.tools.ui.TypeTextTool
 import dev.harness.tools.ui.UiTreeTool
@@ -45,6 +46,7 @@ object HarnessTools {
             ScreenshotTool(ui),
             // Accessibility WRITE
             TapTool(ui),
+            TapElementTool(ui),
             SwipeTool(ui),
             TypeTextTool(ui),
             PressBackTool(ui),
