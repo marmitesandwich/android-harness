@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -198,15 +199,11 @@ private fun StatusRow(label: String, action: String, onClick: () -> Unit) {
 
 // ---- empty state -----------------------------------------------------------
 
-private val Starters = listOf(
-    "What's my screen timeout?",
-    "Show recent crashes from logcat",
-    "Which apps are using the most battery?",
-)
-
 @Composable
 private fun EmptyState(viewModel: ChatViewModel) {
     val c = Harness.colors
+    // A fresh random pick each time the empty chat appears (e.g. after New chat).
+    val starters = remember { pickStarters() }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.Center) {
         Text("Ask about this phone", style = MaterialTheme.typography.titleLarge.copy(fontSize = 30.sp, lineHeight = 36.sp))
         Text(
@@ -215,7 +212,7 @@ private fun EmptyState(viewModel: ChatViewModel) {
             color = c.subdued,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
         )
-        Starters.forEach { prompt ->
+        starters.forEach { prompt ->
             Box(
                 Modifier
                     .fillMaxWidth()
