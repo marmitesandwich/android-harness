@@ -5,6 +5,7 @@ import dev.harness.llm.LlmClient
 import dev.harness.llm.LlmEvent
 import dev.harness.llm.Role
 import dev.harness.llm.ToolCall
+import dev.harness.tools.DONE_TOOL_NAME
 import dev.harness.tools.HarnessJson
 import dev.harness.tools.Tool
 import dev.harness.tools.ToolRegistry
@@ -89,6 +90,13 @@ class AgentLoop(
                 val result = truncateOutput(runTool(tool, call.arguments), maxOutputBytes)
                 emit(AgentEvent.ToolFinished(call.id, tool.name, result))
                 conversation.add(ChatMessage.toolResult(call.id, tool.name, result))
+                // The summary is the user-facing end of the run, so show it as the reply.
+                if (tool.name == DONE_TOOL_NAME) emit(AgentEvent.AssistantDelta(result))
+            }
+
+            if (calls.any { it.name == DONE_TOOL_NAME }) {
+                emit(AgentEvent.Finished(FinishReason.COMPLETED))
+                return@flow
             }
         }
 

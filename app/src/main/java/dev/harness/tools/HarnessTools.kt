@@ -87,6 +87,7 @@ object HarnessTools {
             PressBackTool(ui),
             PressHomeTool(ui),
             // Agent-side
+            DoneTool(),
             NotesTool(notes),
             ClipboardGetTool(clipboard),
             ClipboardSetTool(clipboard),
