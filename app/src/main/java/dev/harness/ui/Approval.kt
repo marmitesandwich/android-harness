@@ -45,7 +45,27 @@ internal fun actionTitle(tool: String): String = when (tool) {
     "type_text" -> "Type text"
     "press_back" -> "Press Back"
     "press_home" -> "Press Home"
+    "start_intent" -> "Open a page or screen"
+    "set_radio" -> "Turn Wi-Fi, Bluetooth or data on or off"
+    "tap_element" -> "Tap something on the screen"
+    "scroll_until" -> "Scroll the screen"
+    "clipboard_set" -> "Copy text to the clipboard"
+    "clipboard_get" -> "Read the clipboard"
+    "write_file" -> "Save a file"
+    "install_apk" -> "Install an app"
+    "uninstall_app" -> "Uninstall an app"
+    "query_contacts" -> "Look up your contacts"
+    "query_calendar" -> "Look at your calendar"
+    "query_sms" -> "Read your text messages"
+    "http_fetch" -> "Fetch a web page"
     else -> tool
+}
+
+/** What the approval card shows under the title: the shell command, or one `name: value` line per argument. */
+internal fun approvalSummary(tool: String, argumentsJson: String): String {
+    val args = parseArgs(argumentsJson) ?: return argumentsJson
+    args["command"]?.takeIf { tool == "run_shell" }?.let { return it }
+    return args.entries.joinToString("\n") { (name, value) -> "$name: $value" }
 }
 
 private fun parseArgs(json: String): Map<String, String>? = try {
@@ -72,7 +92,7 @@ fun ApprovalSheet(pending: PendingApproval, onRespond: (ApprovalResponse) -> Uni
                 Text(actionTitle(pending.toolName), style = MaterialTheme.typography.titleMedium)
             }
             Text(
-                "The agent is asking to change something on this phone. Nothing runs until you allow it.",
+                "The agent is asking permission to do this on this phone. Nothing runs until you allow it.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = c.subdued,
             )
