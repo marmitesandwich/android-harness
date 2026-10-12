@@ -23,6 +23,7 @@ import dev.harness.backend.HttpFetcher
 import dev.harness.backend.ApprovalCard
 import dev.harness.backend.NotesStore
 import dev.harness.backend.OverlayBackend
+import dev.harness.backend.RunKeeper
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.llm.ChatMessage
@@ -44,6 +45,8 @@ class ChatViewModel(
     private val notes: NotesStore,
     private val clipboard: ClipboardBackend,
     private val http: HttpFetcher,
+    private val runKeeper: RunKeeper,
+    private val transcripts: TranscriptStore,
 ) : ViewModel() {
 
     private val conversation = mutableListOf<ChatMessage>()
@@ -89,6 +92,25 @@ class ChatViewModel(
 
     /** Stable per-conversation id sent as `x-opencode-session`; reset on New. */
     private var sessionId: String = newSessionId()
+
+    init {
+        // The system can kill a backgrounded process; bring the chat back from disk.
+        transcripts.load()?.let { saved ->
+            sessionId = saved.sessionId
+            conversation += dropUnfinishedTurn(saved.conversation)
+            val shown = settled(saved.messages)
+            _messages += shown
+            if (shown != saved.messages) {
+                _messages += UiMessage(newId(), UiMessage.Kind.ERROR, "Android closed Harness while it was working. Send a message to continue.")
+            }
+        }
+    }
+
+    // ponytail: written on the main thread at each non-streaming event; move off it if transcripts grow large.
+    private fun persist() {
+        if (_messages.isEmpty()) transcripts.clear()
+        else transcripts.save(Transcript(sessionId, conversation.toList(), _messages.toList()))
+    }
 
     private val prompt = ApprovalPrompt { tool, argumentsJson ->
         val deferred = CompletableDeferred<ApprovalResponse>()
@@ -161,11 +183,15 @@ class ChatViewModel(
         )
 
         isRunning = true
+        persist()
+        runKeeper.hold()
         runJob = viewModelScope.launch {
             try {
                 loop.run(conversation).collect { render(it) }
             } finally {
                 isRunning = false
+                runKeeper.release()
+                persist()
                 pendingApproval?.let { respondToApproval(ApprovalResponse.DENY) }
             }
         }
@@ -175,6 +201,7 @@ class ChatViewModel(
         runJob?.cancel()
         runJob = null
         isRunning = false
+        runKeeper.release()
     }
 
     fun newChat() {
@@ -182,9 +209,15 @@ class ChatViewModel(
         conversation.clear()
         _messages.clear()
         sessionId = newSessionId()
+        transcripts.clear()
     }
 
     private fun render(event: AgentEvent) {
+        renderEvent(event)
+        if (event !is AgentEvent.AssistantDelta) persist()
+    }
+
+    private fun renderEvent(event: AgentEvent) {
         when (event) {
             is AgentEvent.AssistantDelta -> appendAssistantDelta(event.text)
 
@@ -260,7 +293,9 @@ class ChatViewModel(
         private const val TAG = "Harness"
 
         fun factory(app: HarnessApp) = viewModelFactory {
-            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.overlay, app.notes, app.clipboard, app.http) }
+            initializer {
+                ChatViewModel(app.settings, app.shell, app.uiBackend, app.overlay, app.notes, app.clipboard, app.http, app.runKeeper, app.transcripts)
+            }
         }
     }
 }

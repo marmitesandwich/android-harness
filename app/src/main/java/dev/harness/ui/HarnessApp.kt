@@ -4,12 +4,14 @@ import android.app.Application
 import dev.harness.backend.AccessibilityOverlayBackend
 import dev.harness.backend.AccessibilityUiBackend
 import dev.harness.backend.AndroidClipboardBackend
+import dev.harness.backend.AndroidRunKeeper
 import dev.harness.backend.ClipboardBackend
 import dev.harness.backend.FileNotesStore
 import dev.harness.backend.HttpFetcher
 import dev.harness.backend.NotesStore
 import dev.harness.backend.OverlayBackend
 import dev.harness.backend.OkHttpFetcher
+import dev.harness.backend.RunKeeper
 import dev.harness.backend.ShizukuShellBackend
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
@@ -38,6 +40,12 @@ class HarnessApp : Application() {
     lateinit var http: HttpFetcher
         private set
 
+    lateinit var runKeeper: RunKeeper
+        private set
+
+    lateinit var transcripts: TranscriptStore
+        private set
+
     override fun onCreate() {
         super.onCreate()
         settings = SettingsStore(this)
@@ -46,6 +54,8 @@ class HarnessApp : Application() {
         overlay = AccessibilityOverlayBackend()
         clipboard = AndroidClipboardBackend(this)
         http = OkHttpFetcher()
+        runKeeper = AndroidRunKeeper(this)
+        transcripts = FileTranscriptStore { java.io.File(filesDir, "transcript.json") }
         notes = FileNotesStore { java.io.File(filesDir, "notes.txt") }
     }
 
