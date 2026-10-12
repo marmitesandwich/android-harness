@@ -17,6 +17,7 @@ import dev.harness.agent.FinishReason
 import dev.harness.agent.ApprovalPrompt
 import dev.harness.agent.ApprovalResponse
 import dev.harness.backend.HarnessAccessibilityService
+import dev.harness.backend.NotesStore
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.llm.ChatMessage
@@ -34,6 +35,7 @@ class ChatViewModel(
     private val settings: SettingsStore,
     private val shell: ShellBackend,
     private val uiBackend: UiBackend,
+    private val notes: NotesStore,
 ) : ViewModel() {
 
     private val conversation = mutableListOf<ChatMessage>()
@@ -48,7 +50,7 @@ class ChatViewModel(
     var status by mutableStateOf(BackendStatus())
         private set
 
-    private val registry by lazy { HarnessTools.registry(shell, uiBackend) }
+    private val registry by lazy { HarnessTools.registry(shell, uiBackend, notes) }
 
     /** Shown in the top bar; re-read whenever [refreshStatus] runs. */
     val modelName: String get() = settings.model
@@ -210,7 +212,7 @@ class ChatViewModel(
         private const val TAG = "Harness"
 
         fun factory(app: HarnessApp) = viewModelFactory {
-            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend) }
+            initializer { ChatViewModel(app.settings, app.shell, app.uiBackend, app.notes) }
         }
     }
 }

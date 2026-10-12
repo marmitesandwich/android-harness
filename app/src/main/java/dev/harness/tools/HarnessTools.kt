@@ -1,5 +1,6 @@
 package dev.harness.tools
 
+import dev.harness.backend.NotesStore
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
 import dev.harness.tools.shell.AppInfoTool
@@ -41,7 +42,7 @@ import dev.harness.tools.wait.WaitTool
 
 /** Builds the v1 tool set over the given backends. */
 object HarnessTools {
-    fun registry(shell: ShellBackend, ui: UiBackend): ToolRegistry = ToolRegistry(
+    fun registry(shell: ShellBackend, ui: UiBackend, notes: NotesStore): ToolRegistry = ToolRegistry(
         listOf(
             // Shell READ
             GetSettingTool(shell),
@@ -80,6 +81,8 @@ object HarnessTools {
             TypeTextTool(ui),
             PressBackTool(ui),
             PressHomeTool(ui),
+            // Agent-side
+            NotesTool(notes),
             // Waiting
             WaitTool(),
             WaitForLogTool(shell),

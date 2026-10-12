@@ -2,6 +2,8 @@ package dev.harness.ui
 
 import android.app.Application
 import dev.harness.backend.AccessibilityUiBackend
+import dev.harness.backend.FileNotesStore
+import dev.harness.backend.NotesStore
 import dev.harness.backend.ShizukuShellBackend
 import dev.harness.backend.ShellBackend
 import dev.harness.backend.UiBackend
@@ -18,11 +20,15 @@ class HarnessApp : Application() {
     lateinit var uiBackend: UiBackend
         private set
 
+    lateinit var notes: NotesStore
+        private set
+
     override fun onCreate() {
         super.onCreate()
         settings = SettingsStore(this)
         shell = ShizukuShellBackend(this)
         uiBackend = AccessibilityUiBackend(screenshotDir = { cacheDir })
+        notes = FileNotesStore { java.io.File(filesDir, "notes.txt") }
     }
 
     companion object {
