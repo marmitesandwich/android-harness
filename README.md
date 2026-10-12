@@ -47,6 +47,15 @@ your own, one of the three is a past prompt, chosen more often the more you have
 used it. Your prompt history stays on the device in encrypted storage; it keeps
 the 50 most-used. Tapping an example sends it straight away.
 
+One example may also be written for the phone's state right now, for example "Why
+isn't my Wi-Fi working?" when the network is down. It appears with a small "For
+right now" label a moment after the screen opens. To write it, the app sends the
+model a coarse status summary (battery, network, free storage, screen state) once
+when the empty chat opens, and reuses the answer for 10 minutes. No notifications,
+contacts, files or screen text are sent. It is skipped when there is no API key or
+Shizuku is not running, and if the call fails or takes over 10 seconds you simply
+see the usual examples.
+
 **Approving.** Anything that changes the phone, reads private data (contacts,
 calendar, texts, clipboard) or touches the network stops and shows a card with a
 plain-language title, the exact arguments, and three buttons:
