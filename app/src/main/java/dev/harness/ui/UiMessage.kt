@@ -1,6 +1,9 @@
 package dev.harness.ui
 
+import kotlinx.serialization.Serializable
+
 /** A rendered chat entry. Tools and errors render differently from prose. */
+@Serializable
 data class UiMessage(
     val id: String,
     val kind: Kind,

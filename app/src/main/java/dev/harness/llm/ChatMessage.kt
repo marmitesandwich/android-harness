@@ -1,5 +1,7 @@
 package dev.harness.llm
 
+import kotlinx.serialization.Serializable
+
 enum class Role(val wire: String) {
     SYSTEM("system"),
     USER("user"),
@@ -15,6 +17,7 @@ enum class Role(val wire: String) {
 }
 
 /** A tool invocation requested by the model. [arguments] is the raw JSON object text. */
+@Serializable
 data class ToolCall(
     val id: String,
     val name: String,
@@ -22,6 +25,7 @@ data class ToolCall(
 )
 
 /** One entry of the conversation sent to the model. */
+@Serializable
 data class ChatMessage(
     val role: Role,
     val content: String? = null,
