@@ -6,8 +6,9 @@
 #   APPROVE=deny PROMPT="..." scripts/run-prompt.sh   # tap Deny instead of Allow once
 #   NEW_CHAT=0 ...                                      # keep the current chat
 #   MAX_WAIT=120 ...                                    # seconds before giving up (default 90)
+#   RETURN_TO_APP=0 ...                                 # stay on whatever app the agent left open
 #
-# Run it under the device lock (see the adb-mutex skill) when other agents share the phone.
+# If other tools share the phone, run this under a device lock so nothing else taps while it works.
 set -u
 export MSYS_NO_PATHCONV=1
 
@@ -16,6 +17,7 @@ PROMPT="${PROMPT:?set PROMPT}"
 APPROVE="${APPROVE:-allow}"
 NEW_CHAT="${NEW_CHAT:-1}"
 MAX_WAIT="${MAX_WAIT:-90}"
+RETURN_TO_APP="${RETURN_TO_APP:-1}"
 XML="${TMPDIR:-/tmp}/harness_run_prompt.xml"
 
 dump_ui() {
@@ -102,9 +104,12 @@ done
 [ "$waited" -ge "$MAX_WAIT" ] && echo "  gave up after ${MAX_WAIT}s (run may still be going)"
 
 # Come back to the conversation so the final screen dump shows it.
-"$ADB" shell am start -n dev.harness/dev.harness.ui.MainActivity >/dev/null 2>&1
-sleep 2
+if [ "$RETURN_TO_APP" = 1 ]; then
+  "$ADB" shell am start -n dev.harness/dev.harness.ui.MainActivity >/dev/null 2>&1
+  sleep 2
+fi
 
+# A uiautomator dump disturbs overlays such as highlights, so with RETURN_TO_APP=0 take screenshots yourself.
 echo "--- on screen"
 dump_ui
 tr '>' '\n' < "$XML" | grep -o 'text="[^"]*"' | sed 's/^text=//' | grep -v '^""$' | head -n 60
